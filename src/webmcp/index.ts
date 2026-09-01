@@ -8,6 +8,7 @@ import {
   compareProductsTool,
   checkProductStockTool,
   getCurrentPromotionsTool,
+  getAvailableProductVariantsTool,
 } from './tools/productTools';
 import {
   addToCartTool,
@@ -27,6 +28,11 @@ import {
   cancelOrderTool,
   createOrderTool,
 } from './tools/orderTools';
+import {
+  getShippingEstimateTool,
+  getSavedAddressesTool,
+  updateShippingAddressTool,
+} from './tools/shippingTools';
 
 export function registerAllWebMCPTools() {
   // Product & Catalog Tools (Public)
@@ -38,6 +44,7 @@ export function registerAllWebMCPTools() {
   webmcpRegistry.registerTool(compareProductsTool);
   webmcpRegistry.registerTool(checkProductStockTool);
   webmcpRegistry.registerTool(getCurrentPromotionsTool);
+  webmcpRegistry.registerTool(getAvailableProductVariantsTool);
 
   // Cart & Promotions Tools (Auth required)
   webmcpRegistry.registerTool(addToCartTool);
@@ -56,6 +63,11 @@ export function registerAllWebMCPTools() {
   webmcpRegistry.registerTool(getOrderDetailsTool);
   webmcpRegistry.registerTool(cancelOrderTool);
   webmcpRegistry.registerTool(createOrderTool);
+
+  // Shipping & Address Tools
+  webmcpRegistry.registerTool(getShippingEstimateTool);
+  webmcpRegistry.registerTool(getSavedAddressesTool);
+  webmcpRegistry.registerTool(updateShippingAddressTool);
 }
 
 export * from './types';

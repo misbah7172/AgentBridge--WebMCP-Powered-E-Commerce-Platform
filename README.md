@@ -25,6 +25,7 @@ graph TD
         CartService[Cart & Promotions Service]
         WishlistService[Wishlist Service]
         OrderService[Order & Authorization Service]
+        ShippingService[Shipping & Address Service]
         CouponService[Coupon Validation Engine]
     end
 
@@ -42,12 +43,14 @@ graph TD
     APIRoutes --> CartService
     APIRoutes --> WishlistService
     APIRoutes --> OrderService
+    APIRoutes --> ShippingService
     APIRoutes --> CouponService
     AuthService --> SQLiteDB
     ProductService --> SQLiteDB
     CartService --> SQLiteDB
     WishlistService --> SQLiteDB
     OrderService --> SQLiteDB
+    ShippingService --> SQLiteDB
     CouponService --> SQLiteDB
 ```
 
@@ -62,11 +65,11 @@ graph TD
 - **Product Detail Views**: Multi-angle image galleries, technical specifications tables, and verified buyer reviews.
 - **Cart & Promo Engine**: Live cart management with promo code engine (`TECH20`, `SAVE10`, `WELCOME15`).
 - **Safe Demo Checkout**: Complete checkout workflow with saved addresses, demo payment card, and instant order creation.
-- **Customer Account Portal**: Order history tracking, live status indicators, order cancellation for eligible processing orders, and wishlist management.
+- **Customer Account Portal**: Order history tracking, live status indicators, order cancellation for eligible processing orders, saved address book, and wishlist management.
 
 ### For Autonomous AI Agents (WebMCP)
-- **Standardized WebMCP Discovery**: Exposes 18+ semantic tools on `document.modelContext`.
-- **Dynamic Authentication State**: Public tools (`search_products`, `filter_products`, `get_product_details`) are available immediately. Authenticated tools (`add_to_cart`, `get_cart`, `get_order_history`, `cancel_order`) display as `LOGIN_REQUIRED` when unauthenticated and automatically switch to `AVAILABLE` upon login without page refresh.
+- **Standardized WebMCP Discovery**: Exposes 22 semantic tools on `document.modelContext`.
+- **Dynamic Authentication State**: Public tools (`search_products`, `filter_products`, `get_product_details`, `get_shipping_estimate`, etc.) are available immediately. Authenticated tools (`add_to_cart`, `get_cart`, `get_order_history`, `cancel_order`, `get_saved_addresses`, etc.) display as `LOGIN_REQUIRED` when unauthenticated and automatically switch to `AVAILABLE` upon login without page refresh.
 - **Structured Error Responses**: Unauthenticated or unauthorized tool calls return machine-readable structured responses:
   ```json
   {
@@ -76,12 +79,12 @@ graph TD
     "message": "Authentication is required to perform this action. Please log in to continue."
   }
   ```
-- **Strict Authorization Boundary**: Tools accessing sensitive user data verify session ownership on the server (`order.userId === authenticatedUser.id`).
+- **Strict Authorization Boundary**: Tools accessing sensitive user data verify session ownership on the server (`order.userId === authenticatedUser.id`, `address.userId === authenticatedUser.id`).
 - **Minimal Unobtrusive Indicator**: Sleek floating pill `[↗ WebMCP]` in the bottom-right corner that expands on hover to display registered tools, permission status, schema definitions, and interactive tool tester.
 
 ---
 
-## 3. WebMCP Tool Directory (18 Registered Tools)
+## 3. WebMCP Tool Directory (22 Registered Tools)
 
 | Tool Name | Category | Permission | Purpose & Inputs |
 | :--- | :--- | :--- | :--- |
@@ -93,6 +96,8 @@ graph TD
 | `compare_products` | Products | **PUBLIC** | Side-by-side spec comparison (`productIds: string[]`) |
 | `check_product_stock` | Products | **PUBLIC** | Real-time stock status and inventory count (`productId: string`) |
 | `get_current_promotions` | Promotions | **PUBLIC** | Retrieve active deals, featured products, and active coupons |
+| `get_available_product_variants` | Products | **PUBLIC** | Retrieve color, storage, RAM, or sizing variants (`productId: string`) |
+| `get_shipping_estimate` | Shipping | **PUBLIC** | Estimate shipping rate and delivery timeline (`zipCode: string`, `weight?: number`) |
 | `add_to_cart` | Cart | **AUTHENTICATED** | Add item to user cart (`productId: string`, `quantity: number`) |
 | `get_cart` | Cart | **AUTHENTICATED** | Retrieve current user cart items, calculations, and discounts |
 | `update_cart_quantity` | Cart | **AUTHENTICATED** | Update item quantity in cart (`productId: string`, `quantity: number`) |
@@ -101,6 +106,8 @@ graph TD
 | `add_to_wishlist` | Wishlist | **AUTHENTICATED** | Add product to wishlist (`productId: string`) |
 | `remove_from_wishlist` | Wishlist | **AUTHENTICATED** | Remove product from wishlist (`productId: string`) |
 | `get_wishlist` | Wishlist | **AUTHENTICATED** | Retrieve user saved wishlist items |
+| `get_saved_addresses` | Account | **AUTHENTICATED** | Retrieve user saved shipping addresses |
+| `update_shipping_address` | Account | **AUTHENTICATED** | Add or update a saved shipping address |
 | `get_order_history` | Orders | **AUTHENTICATED** | Retrieve authenticated user previous orders |
 | `get_order_details` | Orders | **AUTHENTICATED** | Get order details and tracking (`orderId: string`) |
 | `cancel_order` | Orders | **AUTHENTICATED** | Cancel eligible order (`orderId: string`, `reason?: string`) |
@@ -142,7 +149,10 @@ npm run db:seed
 # 4. Run automated test suite
 npm run test
 
-# 5. Start development server
+# 5. Run autonomous AI agent simulation
+npx tsx scripts/agent-demo.ts
+
+# 6. Start development server
 npm run dev
 ```
 
@@ -165,3 +175,4 @@ The test suite validates:
 5. Authenticated tool executions for cart, wishlist, and orders.
 6. Ownership authorization checks preventing cross-user data exposure.
 7. Business rules preventing cancellation of shipped/delivered orders.
+8. Shipping calculation and Address management isolation rules.

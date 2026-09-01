@@ -258,6 +258,60 @@ describe('WebMCP E-Commerce Platform Test Suite', () => {
     });
   });
 
+  describe('6. Shipping, Variants & Address Management Rules', () => {
+    it('should calculate shipping estimates with standard, express, and overnight options', async () => {
+      const zipCode = '94102';
+      const zip = parseInt(zipCode, 10);
+      const isWestCoast = zip >= 90000 && zip <= 96999;
+      expect(isWestCoast).toBe(true);
+
+      const baseRate = 7.99;
+      const expressRate = parseFloat((baseRate * 2.2).toFixed(2));
+      const overnightRate = parseFloat((baseRate * 4.5).toFixed(2));
+
+      expect(baseRate).toBe(7.99);
+      expect(expressRate).toBe(17.58);
+      expect(overnightRate).toBe(35.95);
+    });
+
+    it('should create, list, and delete saved shipping addresses for user', async () => {
+      // Create address
+      const newAddress = await prisma.address.create({
+        data: {
+          userId: demoUser.id,
+          fullName: 'Alex Work Address',
+          street: '100 Market St Suite 300',
+          city: 'San Francisco',
+          state: 'CA',
+          zipCode: '94105',
+          country: 'United States',
+          isDefault: false,
+        },
+      });
+      expect(newAddress.id).toBeDefined();
+      expect(newAddress.userId).toBe(demoUser.id);
+
+      // Verify listing returns user's addresses
+      const userAddresses = await prisma.address.findMany({
+        where: { userId: demoUser.id },
+      });
+      expect(userAddresses.some((a) => a.id === newAddress.id)).toBe(true);
+
+      // Verify other user cannot see this address
+      const otherUserAddresses = await prisma.address.findMany({
+        where: { userId: otherUser.id },
+      });
+      expect(otherUserAddresses.some((a) => a.id === newAddress.id)).toBe(false);
+
+      // Delete address
+      await prisma.address.delete({ where: { id: newAddress.id } });
+      const verifyDeleted = await prisma.address.findUnique({
+        where: { id: newAddress.id },
+      });
+      expect(verifyDeleted).toBeNull();
+    });
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });

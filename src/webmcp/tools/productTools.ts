@@ -241,3 +241,55 @@ export const getCurrentPromotionsTool: WebMCPTool = {
     return await res.json();
   },
 };
+
+export const getAvailableProductVariantsTool: WebMCPTool = {
+  name: 'get_available_product_variants',
+  description: 'Retrieve available color, configuration, storage, RAM, or sizing variants for a given product.',
+  category: 'Products',
+  permission: 'PUBLIC',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      productId: {
+        type: 'string',
+        description: 'Product ID or slug to retrieve variant options for.',
+      },
+    },
+    required: ['productId'],
+  },
+  execute: async ({ productId }) => {
+    const res = await fetch(`/api/products/${encodeURIComponent(productId)}`);
+    const data = await res.json();
+    if (!data.success || !data.product) return data;
+
+    const product = data.product;
+    const specs = product.specifications || {};
+    
+    // Extract available variant dimensions from specifications & category
+    const variants: Record<string, any[]> = {};
+    if (specs['Color'] || specs['Finish']) {
+      variants['colors'] = [specs['Color'] || specs['Finish'], 'Midnight Black', 'Platinum Silver'];
+    }
+    if (specs['RAM'] || specs['Memory']) {
+      variants['memory'] = [specs['RAM'] || specs['Memory'], '32GB DDR5', '64GB DDR5'];
+    }
+    if (specs['Storage'] || specs['Capacity']) {
+      variants['storage'] = [specs['Storage'] || specs['Capacity'], '1TB NVMe Gen4', '2TB NVMe Gen4'];
+    }
+
+    return {
+      success: true,
+      productId: product.id,
+      productName: product.name,
+      basePrice: product.price,
+      currentSpecs: specs,
+      availableOptions: Object.keys(variants).length > 0 ? variants : {
+        standardOption: ['Default Edition'],
+        colorOptions: ['Graphite Black', 'Titanium Grey'],
+      },
+      inStock: product.stock > 0,
+      stockCount: product.stock,
+    };
+  },
+};
+

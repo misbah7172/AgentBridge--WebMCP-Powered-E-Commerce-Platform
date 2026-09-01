@@ -26,11 +26,16 @@ export default function AccountPage() {
   const { addToCart } = useCart();
   const { items: wishlistItems, toggleWishlist, fetchWishlist } = useWishlist();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'profile'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'addresses' | 'profile'>('orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [cancelMessage, setCancelMessage] = useState<{ text: string; success: boolean } | null>(null);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressForm, setAddressForm] = useState({ fullName: '', street: '', city: '', state: '', zipCode: '', country: 'United States', phone: '', isDefault: false });
+  const [savingAddress, setSavingAddress] = useState(false);
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -48,10 +53,58 @@ export default function AccountPage() {
     }
   };
 
+  const fetchAddresses = async () => {
+    if (!user) return;
+    setLoadingAddresses(true);
+    try {
+      const res = await fetch('/api/addresses');
+      const data = await res.json();
+      if (data.success) {
+        setAddresses(data.addresses || []);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    setSavingAddress(true);
+    try {
+      const res = await fetch('/api/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addressForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddressForm(false);
+        setAddressForm({ fullName: '', street: '', city: '', state: '', zipCode: '', country: 'United States', phone: '', isDefault: false });
+        fetchAddresses();
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!confirm('Delete this address?')) return;
+    try {
+      await fetch(`/api/addresses?addressId=${addressId}`, { method: 'DELETE' });
+      fetchAddresses();
+    } catch {
+      // Ignore
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchOrders();
       fetchWishlist();
+      fetchAddresses();
     }
   }, [user]);
 
@@ -186,6 +239,25 @@ export default function AccountPage() {
           }}
         >
           <Heart size={16} /> Wishlist ({wishlistItems.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('addresses')}
+          style={{
+            padding: '10px 18px',
+            background: 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'addresses' ? '2px solid var(--brand-primary)' : '2px solid transparent',
+            color: activeTab === 'addresses' ? '#f8fafc' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: '0.9375rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <MapPin size={16} /> Addresses ({addresses.length})
         </button>
 
         <button
@@ -474,6 +546,167 @@ export default function AccountPage() {
                       <Trash2 size={14} />
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Addresses */}
+      {activeTab === 'addresses' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 className="h3" style={{ color: '#f8fafc', margin: 0 }}>Saved Shipping Addresses</h3>
+            <button onClick={() => setShowAddressForm(!showAddressForm)} className="btn btn-primary btn-sm">
+              {showAddressForm ? 'Cancel' : '+ Add Address'}
+            </button>
+          </div>
+
+          {showAddressForm && (
+            <div
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '24px',
+                marginBottom: '24px',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Full Name</label>
+                  <input
+                    type="text"
+                    value={addressForm.fullName}
+                    onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
+                    className="input"
+                    placeholder="John Doe"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Street Address</label>
+                  <input
+                    type="text"
+                    value={addressForm.street}
+                    onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                    placeholder="123 Main Street"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>City</label>
+                  <input
+                    type="text"
+                    value={addressForm.city}
+                    onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                    placeholder="San Francisco"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>State</label>
+                  <input
+                    type="text"
+                    value={addressForm.state}
+                    onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                    placeholder="CA"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>ZIP Code</label>
+                  <input
+                    type="text"
+                    value={addressForm.zipCode}
+                    onChange={(e) => setAddressForm({ ...addressForm, zipCode: e.target.value })}
+                    placeholder="94102"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Phone</label>
+                  <input
+                    type="text"
+                    value={addressForm.phone}
+                    onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                    placeholder="(555) 123-4567"
+                    style={{ width: '100%', padding: '10px 14px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={addressForm.isDefault}
+                    onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
+                    id="defaultAddr"
+                  />
+                  <label htmlFor="defaultAddr" style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>Set as default shipping address</label>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveAddress}
+                disabled={savingAddress || !addressForm.fullName || !addressForm.street || !addressForm.city || !addressForm.state || !addressForm.zipCode}
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: '16px' }}
+              >
+                {savingAddress ? 'Saving...' : 'Save Address'}
+              </button>
+            </div>
+          )}
+
+          {addresses.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '60px 24px',
+                textAlign: 'center',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <MapPin size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
+                No saved addresses
+              </div>
+              <p style={{ fontSize: '0.875rem', maxWidth: '400px', margin: '0 auto' }}>
+                Add a shipping address to speed up checkout and for AI agents to use during order placement.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+              {addresses.map((addr: any) => (
+                <div
+                  key={addr.id}
+                  style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: addr.isDefault ? '1px solid var(--brand-primary)' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '20px',
+                    position: 'relative',
+                  }}
+                >
+                  {addr.isDefault && (
+                    <span className="badge badge-stock" style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '0.6875rem', padding: '2px 8px' }}>
+                      Default
+                    </span>
+                  )}
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>{addr.fullName}</div>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {addr.street}<br />
+                    {addr.city}, {addr.state} {addr.zipCode}<br />
+                    {addr.country}
+                    {addr.phone && <><br />{addr.phone}</>}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteAddress(addr.id)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '14px', fontSize: '0.75rem', padding: '4px 10px', gap: '4px' }}
+                  >
+                    <Trash2 size={12} /> Remove
+                  </button>
                 </div>
               ))}
             </div>
