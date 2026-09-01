@@ -53,7 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Register all tools on initial client mount
-    registerAllWebMCPTools();
+    try {
+      registerAllWebMCPTools();
+    } catch (err) {
+      console.warn('[WebMCP] Tool registration notice:', err);
+    }
     checkCurrentUser();
   }, []);
 

@@ -6,45 +6,96 @@ class WebMCPRegistry {
   private currentUser: any = null;
   private listeners: Set<(tools: RegisteredToolInfo[]) => void> = new Set();
   private executionListeners: Set<(event: { toolName: string; input: any; result: any; timestamp: number }) => void> = new Set();
+  private nativeRegisterToolFn: ((tool: any) => void) | null = null;
+  private isInitialized: boolean = false;
 
   constructor() {
-    this.initDocumentModelContext();
+    this.safeInit();
   }
 
-  public initDocumentModelContext() {
-    if (typeof document === 'undefined') return;
+  public safeInit() {
+    if (this.isInitialized || typeof document === 'undefined') return;
 
-    const self = this;
-    const modelContextImpl: ModelContextInterface = {
-      registerTool: (tool: WebMCPTool) => {
-        self.registerTool(tool);
-      },
-      unregisterTool: (toolName: string) => {
-        self.unregisterTool(toolName);
-      },
-      getTools: () => {
-        return self.getRegisteredToolsInfo();
-      },
-      executeTool: (name: string, input: any) => {
-        return self.executeTool(name, input);
-      },
-    };
-
-    // Attach to document.modelContext
     try {
-      Object.defineProperty(document, 'modelContext', {
-        value: modelContextImpl,
-        writable: true,
-        configurable: true,
-      });
-    } catch {
-      (document as any).modelContext = modelContextImpl;
+      const self = this;
+
+      // Check if native document.modelContext exists
+      const existingContext = (document as any).modelContext;
+      if (existingContext && typeof existingContext.registerTool === 'function' && !(existingContext as any).__isAgentBridgeWebMCP) {
+        // Native or existing WebMCP provider detected
+        this.nativeRegisterToolFn = existingContext.registerTool.bind(existingContext);
+      }
+
+      const modelContextImpl: ModelContextInterface & { __isAgentBridgeWebMCP?: boolean } = {
+        __isAgentBridgeWebMCP: true,
+        registerTool: (tool: WebMCPTool) => {
+          self.registerTool(tool);
+        },
+        unregisterTool: (toolName: string) => {
+          self.unregisterTool(toolName);
+        },
+        getTools: () => {
+          return self.getRegisteredToolsInfo();
+        },
+        executeTool: (name: string, input: any) => {
+          return self.executeTool(name, input);
+        },
+      };
+
+      // Safely attach to document.modelContext if not already present or configurable
+      if (!('modelContext' in document) || !(document as any).modelContext) {
+        try {
+          Object.defineProperty(document, 'modelContext', {
+            value: modelContextImpl,
+            writable: true,
+            configurable: true,
+          });
+        } catch {
+          try {
+            (document as any).modelContext = modelContextImpl;
+          } catch {
+            // Document is sealed or non-writable in some browser sandbox
+          }
+        }
+      }
+
+      this.isInitialized = true;
+    } catch (err) {
+      console.warn('[WebMCP] Safe initialization warning:', err);
     }
   }
 
+  public initDocumentModelContext() {
+    this.safeInit();
+  }
+
   public registerTool(tool: WebMCPTool) {
-    this.tools.set(tool.name, tool);
-    this.notifyListeners();
+    if (!tool || !tool.name) return;
+
+    try {
+      this.safeInit();
+      this.tools.set(tool.name, tool);
+
+      // If a native browser WebMCP registry exists, also register with the native agent runtime
+      if (this.nativeRegisterToolFn) {
+        try {
+          this.nativeRegisterToolFn({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+            execute: async (input: any) => {
+              return await this.executeTool(tool.name, input);
+            },
+          });
+        } catch (nativeErr) {
+          console.warn(`[WebMCP] Native tool registration for ${tool.name}:`, nativeErr);
+        }
+      }
+
+      this.notifyListeners();
+    } catch (err) {
+      console.warn(`[WebMCP] Failed to register tool "${tool?.name}":`, err);
+    }
   }
 
   public unregisterTool(toolName: string) {
@@ -122,7 +173,11 @@ class WebMCPRegistry {
 
   public subscribe(listener: (tools: RegisteredToolInfo[]) => void): () => void {
     this.listeners.add(listener);
-    listener(this.getRegisteredToolsInfo());
+    try {
+      listener(this.getRegisteredToolsInfo());
+    } catch (err) {
+      console.error('Error executing initial WebMCP listener:', err);
+    }
     return () => this.listeners.delete(listener);
   }
 
