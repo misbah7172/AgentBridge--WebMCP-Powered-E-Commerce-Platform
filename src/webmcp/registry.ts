@@ -1,12 +1,18 @@
-import { WebMCPTool, RegisteredToolInfo, ModelContextInterface, ToolExecutionResponse } from './types';
+import { JSONSchema, WebMCPTool, RegisteredToolInfo, ModelContextInterface, ToolExecutionResponse } from './types';
 
-class WebMCPRegistry {
+type NativeRegisterTool = (
+  tool: Pick<WebMCPTool, 'name' | 'description' | 'inputSchema'> & { execute: (input: unknown, options?: { signal?: AbortSignal }) => Promise<unknown> },
+  options?: { signal?: AbortSignal },
+) => Promise<void> | void;
+
+export class WebMCPRegistry {
   private tools: Map<string, WebMCPTool> = new Map();
   private isAuthenticated: boolean = false;
   private currentUser: any = null;
   private listeners: Set<(tools: RegisteredToolInfo[]) => void> = new Set();
   private executionListeners: Set<(event: { toolName: string; input: any; result: any; timestamp: number }) => void> = new Set();
-  private nativeRegisterToolFn: ((tool: any) => void) | null = null;
+  private nativeRegisterToolFn: NativeRegisterTool | null = null;
+  private nativeToolControllers: Map<string, AbortController> = new Map();
   private isInitialized: boolean = false;
 
   constructor() {
@@ -22,7 +28,7 @@ class WebMCPRegistry {
       // Check if native document.modelContext exists
       const existingContext = (document as any).modelContext;
       if (existingContext && typeof existingContext.registerTool === 'function' && !(existingContext as any).__isAgentBridgeWebMCP) {
-        // Native or existing WebMCP provider detected
+        // Browser-provided WebMCP context. Never replace or redefine this object.
         this.nativeRegisterToolFn = existingContext.registerTool.bind(existingContext);
       }
 
@@ -42,8 +48,10 @@ class WebMCPRegistry {
         },
       };
 
-      // Safely attach to document.modelContext if not already present or configurable
-      if (!('modelContext' in document) || !(document as any).modelContext) {
+      // A compatibility context is only useful in deterministic Node tests. Installing
+      // one in a browser masks WebMCP availability and can collide with Chrome's
+      // read-only native `document.modelContext` property.
+      if (process.env.NODE_ENV === 'test' && !existingContext) {
         try {
           Object.defineProperty(document, 'modelContext', {
             value: modelContextImpl,
@@ -51,11 +59,8 @@ class WebMCPRegistry {
             configurable: true,
           });
         } catch {
-          try {
-            (document as any).modelContext = modelContextImpl;
-          } catch {
-            // Document is sealed or non-writable in some browser sandbox
-          }
+          // Test environments may provide a sealed document; registry tests can use
+          // the registry directly in that case.
         }
       }
 
@@ -75,22 +80,7 @@ class WebMCPRegistry {
     try {
       this.safeInit();
       this.tools.set(tool.name, tool);
-
-      // If a native browser WebMCP registry exists, also register with the native agent runtime
-      if (this.nativeRegisterToolFn) {
-        try {
-          this.nativeRegisterToolFn({
-            name: tool.name,
-            description: tool.description,
-            inputSchema: tool.inputSchema,
-            execute: async (input: any) => {
-              return await this.executeTool(tool.name, input);
-            },
-          });
-        } catch (nativeErr) {
-          console.warn(`[WebMCP] Native tool registration for ${tool.name}:`, nativeErr);
-        }
-      }
+      this.syncNativeTool(tool);
 
       this.notifyListeners();
     } catch (err) {
@@ -99,6 +89,8 @@ class WebMCPRegistry {
   }
 
   public unregisterTool(toolName: string) {
+    this.nativeToolControllers.get(toolName)?.abort();
+    this.nativeToolControllers.delete(toolName);
     this.tools.delete(toolName);
     this.notifyListeners();
   }
@@ -106,6 +98,7 @@ class WebMCPRegistry {
   public setAuthState(isAuthenticated: boolean, user: any = null) {
     this.isAuthenticated = isAuthenticated;
     this.currentUser = user;
+    this.tools.forEach((tool) => this.syncNativeTool(tool));
     this.notifyListeners();
   }
 
@@ -141,6 +134,7 @@ class WebMCPRegistry {
         success: false,
         error: 'TOOL_NOT_FOUND',
         message: `WebMCP tool "${name}" is not registered on this page.`,
+        errorDetails: { code: 'TOOL_NOT_FOUND', message: `WebMCP tool "${name}" is not registered on this page.`, retryable: false },
       };
     }
 
@@ -151,9 +145,22 @@ class WebMCPRegistry {
         error: 'AUTHENTICATION_REQUIRED',
         requiresAuthentication: true,
         message: `Authentication is required to execute "${name}". Please log in to your account.`,
+        errorDetails: { code: 'AUTHENTICATION_REQUIRED', message: `Authentication is required to execute "${name}". Please log in to your account.`, retryable: false, userActionRequired: true },
       };
       this.notifyExecution(name, input, authErrorResponse);
       return authErrorResponse;
+    }
+
+    const inputError = validateInput(tool.inputSchema, input);
+    if (inputError) {
+      const invalidInput: ToolExecutionResponse = {
+        success: false,
+        error: 'INVALID_INPUT',
+        message: inputError,
+        errorDetails: { code: 'INVALID_INPUT', message: inputError, retryable: false, userActionRequired: true },
+      };
+      this.notifyExecution(name, input, invalidInput);
+      return invalidInput;
     }
 
     try {
@@ -165,6 +172,7 @@ class WebMCPRegistry {
         success: false,
         error: 'EXECUTION_ERROR',
         message: err?.message || 'An unexpected error occurred during tool execution.',
+        errorDetails: { code: 'EXECUTION_ERROR', message: err?.message || 'An unexpected error occurred during tool execution.', retryable: true },
       };
       this.notifyExecution(name, input, errorResult);
       return errorResult;
@@ -207,6 +215,59 @@ class WebMCPRegistry {
       }
     });
   }
+
+  private syncNativeTool(tool: WebMCPTool) {
+    if (!this.nativeRegisterToolFn) return;
+
+    const isAvailable = tool.permission === 'PUBLIC' || this.isAuthenticated;
+    const existingController = this.nativeToolControllers.get(tool.name);
+    if (!isAvailable) {
+      existingController?.abort();
+      this.nativeToolControllers.delete(tool.name);
+      return;
+    }
+
+    if (existingController) return;
+
+    const controller = new AbortController();
+    this.nativeToolControllers.set(tool.name, controller);
+    const nativeTool = {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      execute: async (input: unknown, options?: { signal?: AbortSignal }) => {
+        if (options?.signal?.aborted) {
+          return {
+            success: false,
+            error: 'EXECUTION_CANCELLED',
+            message: `WebMCP tool "${tool.name}" execution was cancelled.`,
+          };
+        }
+        return this.executeTool(tool.name, input);
+      },
+    };
+
+    Promise.resolve(this.nativeRegisterToolFn(nativeTool, { signal: controller.signal })).catch((nativeErr) => {
+      this.nativeToolControllers.delete(tool.name);
+      console.warn(`[WebMCP] Native tool registration for ${tool.name}:`, nativeErr);
+    });
+  }
+}
+
+function validateInput(schema: JSONSchema, input: unknown): string | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return 'Tool input must be a JSON object.';
+  const values = input as Record<string, unknown>;
+  for (const required of schema.required || []) {
+    if (values[required] === undefined || values[required] === null || values[required] === '') return `Missing required parameter: ${required}.`;
+  }
+  for (const [key, value] of Object.entries(values)) {
+    const property = schema.properties[key];
+    if (!property || value === undefined) continue;
+    const actualType = Array.isArray(value) ? 'array' : typeof value;
+    if (actualType !== property.type) return `Invalid parameter ${key}: expected ${property.type}.`;
+    if (property.enum && !property.enum.includes(value as string)) return `Invalid parameter ${key}: unsupported value.`;
+  }
+  return null;
 }
 
 export const webmcpRegistry = new WebMCPRegistry();

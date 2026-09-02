@@ -9,7 +9,9 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:webmcp": "tsx scripts/run-webmcp-evals.ts",
+    "eval:webmcp:schema": "tsx scripts/validate-webmcp-evals.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",

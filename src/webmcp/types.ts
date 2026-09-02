@@ -31,9 +31,25 @@ export interface ToolExecutionResponse<T = any> {
   success: boolean;
   requiresAuthentication?: boolean;
   error?: string;
+  errorDetails?: {
+    code: string;
+    message: string;
+    retryable: boolean;
+    userActionRequired?: boolean;
+  };
   message?: string;
   data?: T;
   [key: string]: any;
+}
+
+export interface ToolExecutionTrace {
+  toolName: string;
+  input: unknown;
+  output: ToolExecutionResponse;
+  durationMs: number;
+  startedAt: string;
+  stateBefore: string;
+  stateAfter: string;
 }
 
 export interface RegisteredToolInfo {

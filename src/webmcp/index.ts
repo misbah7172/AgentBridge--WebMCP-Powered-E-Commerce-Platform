@@ -15,6 +15,7 @@ import {
   getCartTool,
   updateCartQuantityTool,
   removeFromCartTool,
+  clearCartTool,
   applyCouponTool,
 } from './tools/cartTools';
 import {
@@ -51,6 +52,7 @@ export function registerAllWebMCPTools() {
   webmcpRegistry.registerTool(getCartTool);
   webmcpRegistry.registerTool(updateCartQuantityTool);
   webmcpRegistry.registerTool(removeFromCartTool);
+  webmcpRegistry.registerTool(clearCartTool);
   webmcpRegistry.registerTool(applyCouponTool);
 
   // Wishlist Tools (Auth required)

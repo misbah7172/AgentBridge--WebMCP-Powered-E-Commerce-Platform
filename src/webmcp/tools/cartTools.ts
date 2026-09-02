@@ -96,6 +96,18 @@ export const removeFromCartTool: WebMCPTool = {
   },
 };
 
+export const clearCartTool: WebMCPTool = {
+  name: 'clear_cart',
+  description: 'Remove every item from the authenticated user cart. Use only when the user explicitly asks to empty the entire cart.',
+  category: 'Cart',
+  permission: 'AUTHENTICATED',
+  inputSchema: { type: 'object', properties: {} },
+  execute: async () => {
+    const res = await fetch('/api/cart?clear=true', { method: 'DELETE' });
+    return await res.json();
+  },
+};
+
 export const applyCouponTool: WebMCPTool = {
   name: 'apply_coupon',
   description: 'Apply a promotional coupon code (e.g., TECH20, SAVE10, WELCOME15) to calculate discount on cart items.',
