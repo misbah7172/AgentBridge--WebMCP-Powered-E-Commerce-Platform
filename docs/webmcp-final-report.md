@@ -1,6 +1,6 @@
 # AgentBridge WebMCP validation report
 
-**Validation date:** 2026-09-03  
+**Validation date:** 2026-09-03
 **Scope:** local demo application and existing Neon demo database
 
 ## Measured results
