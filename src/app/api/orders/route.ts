@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { getUserOrders, createOrder } from '@/lib/services/orderService';
+import { validateDemoCheckoutSubmission } from '@/lib/checkoutPolicy';
 
 export async function GET(req: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { fullName, street, city, state, zipCode, country, phone, couponCode, paymentMethod } = body;
+    const { fullName, street, city, state, zipCode, country, phone, couponCode, paymentMethod, demoOrderConfirmed } = body;
 
     if (!fullName || !street || !city || !state || !zipCode) {
       return NextResponse.json(
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
           error: 'MISSING_SHIPPING_FIELDS',
           message: 'Shipping name, street address, city, state, and ZIP code are required.',
         },
+        { status: 400 }
+      );
+    }
+
+    const checkoutPolicy = validateDemoCheckoutSubmission({ paymentMethod, demoOrderConfirmed });
+    if (!checkoutPolicy.valid) {
+      return NextResponse.json(
+        { success: false, error: checkoutPolicy.error, message: checkoutPolicy.message },
         { status: 400 }
       );
     }
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
       country,
       phone,
       couponCode,
-      paymentMethod,
+      paymentMethod: checkoutPolicy.paymentMethod,
     });
 
     if (!result.success) {

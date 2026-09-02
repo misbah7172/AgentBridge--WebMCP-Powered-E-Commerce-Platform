@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { webmcpRegistry } from '@/webmcp/registry';
 import { registerAllWebMCPTools } from '@/webmcp';
 
@@ -31,11 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
+  const authRequestVersion = useRef(0);
 
   const checkCurrentUser = async () => {
+    const requestVersion = ++authRequestVersion.current;
     try {
       const res = await fetch('/api/auth/me');
       const data = await res.json();
+      if (requestVersion !== authRequestVersion.current) return;
       if (data.success && data.authenticated && data.user) {
         setUser(data.user);
         webmcpRegistry.setAuthState(true, data.user);
@@ -44,10 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         webmcpRegistry.setAuthState(false, null);
       }
     } catch {
+      if (requestVersion !== authRequestVersion.current) return;
       setUser(null);
       webmcpRegistry.setAuthState(false, null);
     } finally {
-      setLoading(false);
+      if (requestVersion === authRequestVersion.current) setLoading(false);
     }
   };
 
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    ++authRequestVersion.current;
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success && data.user) {
         setUser(data.user);
+        setLoading(false);
         webmcpRegistry.setAuthState(true, data.user);
         setIsAuthModalOpen(false);
         return { success: true, message: data.message };
@@ -82,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (name: string, email: string, password: string) => {
+    ++authRequestVersion.current;
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -91,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success && data.user) {
         setUser(data.user);
+        setLoading(false);
         webmcpRegistry.setAuthState(true, data.user);
         setIsAuthModalOpen(false);
         return { success: true, message: data.message };
@@ -102,12 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    ++authRequestVersion.current;
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {
       // Ignore
     } finally {
       setUser(null);
+      setLoading(false);
       webmcpRegistry.setAuthState(false, null);
     }
   };

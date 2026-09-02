@@ -6,6 +6,8 @@
 # testing
 /coverage
 /eval-results
+/test-results
+/playwright-report
 
 # next.js
 /.next/
@@ -27,6 +29,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # vercel
 .vercel

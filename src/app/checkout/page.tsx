@@ -154,7 +154,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, demoOrderConfirmed: true }),
       });
 
       const data = await res.json();

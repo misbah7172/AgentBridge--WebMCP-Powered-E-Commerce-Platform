@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { webmcpRegistry } from '@/webmcp/registry';
 
 export interface CartProduct {
   id: string;
@@ -103,15 +104,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     fetchCart();
   }, [user]);
 
-  const addToCart = async (productId: string, quantity: number = 1) => {
-    if (!user) {
-      openAuthModal('login');
-      return {
-        success: false,
-        message: 'Please log in before adding items to your cart.',
-      };
-    }
+  useEffect(() => {
+    webmcpRegistry.setCartItemCount(user ? cart.itemCount : 0);
+  }, [user, cart.itemCount]);
 
+  useEffect(() => webmcpRegistry.onExecution(({ result }) => {
+    if (result?.success && result.cart) setCart(result.cart);
+  }), []);
+
+  const addToCart = async (productId: string, quantity: number = 1) => {
     try {
       const res = await fetch('/api/cart', {
         method: 'POST',
@@ -124,6 +125,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setIsDrawerOpen(true);
         return { success: true, message: data.message };
       }
+      if (data.requiresAuthentication) openAuthModal('login');
       return { success: false, message: data.message || 'Could not add to cart' };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Cart error' };
@@ -131,8 +133,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = async (productId: string, quantity: number) => {
-    if (!user) return { success: false, message: 'Authentication required' };
-
     try {
       const res = await fetch('/api/cart', {
         method: 'PUT',
@@ -144,6 +144,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart(data.cart);
         return { success: true, message: data.message };
       }
+      if (data.requiresAuthentication) openAuthModal('login');
       return { success: false, message: data.message };
     } catch (err: any) {
       return { success: false, message: err?.message };
@@ -151,8 +152,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = async (productId: string) => {
-    if (!user) return { success: false, message: 'Authentication required' };
-
     try {
       const res = await fetch(`/api/cart?productId=${encodeURIComponent(productId)}`, {
         method: 'DELETE',
@@ -162,6 +161,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart(data.cart);
         return { success: true, message: data.message };
       }
+      if (data.requiresAuthentication) openAuthModal('login');
       return { success: false, message: data.message };
     } catch (err: any) {
       return { success: false, message: err?.message };

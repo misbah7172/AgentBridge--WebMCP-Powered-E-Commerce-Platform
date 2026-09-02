@@ -1,4 +1,5 @@
 export type ToolPermission = 'PUBLIC' | 'AUTHENTICATED' | 'TRANSACTIONAL';
+export type ToolAvailability = 'ALWAYS' | 'CART_POPULATED';
 
 export interface JSONSchemaProperty {
   type: string;
@@ -23,6 +24,7 @@ export interface WebMCPTool<TInput = any, TOutput = any> {
   description: string;
   inputSchema: JSONSchema;
   permission: ToolPermission;
+  availability?: ToolAvailability;
   category: 'Products' | 'Cart' | 'Wishlist' | 'Orders' | 'Promotions' | 'Shipping' | 'Account';
   execute: (input: TInput) => Promise<TOutput>;
 }
@@ -57,8 +59,9 @@ export interface RegisteredToolInfo {
   description: string;
   inputSchema: JSONSchema;
   permission: ToolPermission;
+  availability?: ToolAvailability;
   category: string;
-  status: 'AVAILABLE' | 'LOGIN_REQUIRED';
+  status: 'AVAILABLE' | 'LOGIN_REQUIRED' | 'STATE_UNAVAILABLE';
 }
 
 export interface ModelContextInterface {

@@ -231,6 +231,7 @@ export async function createOrder(userId: string, input: CreateOrderInput) {
 
   // Clear user's cart
   await clearCart(userId);
+  const clearedCart = await getUserCart(userId);
 
   return {
     success: true,
@@ -243,5 +244,6 @@ export async function createOrder(userId: string, input: CreateOrderInput) {
     items: newOrder.items,
     shippingAddress: shippingAddressObj,
     createdAt: newOrder.createdAt,
+    cart: clearedCart,
   };
 }

@@ -70,6 +70,7 @@ export const createOrderTool: WebMCPTool = {
   description: 'Place an order using the items in the current cart with the specified shipping address and demo payment method.',
   category: 'Orders',
   permission: 'TRANSACTIONAL',
+  availability: 'CART_POPULATED',
   inputSchema: {
     type: 'object',
     properties: {
@@ -83,16 +84,21 @@ export const createOrderTool: WebMCPTool = {
       couponCode: { type: 'string', description: 'Optional coupon code (e.g. TECH20)' },
       paymentMethod: {
         type: 'string',
+        enum: ['DEMO_CARD'],
         description: 'Demo payment method (default: "DEMO_CARD")',
       },
+      confirmDemoOrder: {
+        type: 'boolean',
+        description: 'Must be true only after the user explicitly confirms this demo order.',
+      },
     },
-    required: ['fullName', 'street', 'city', 'state', 'zipCode'],
+    required: ['fullName', 'street', 'city', 'state', 'zipCode', 'confirmDemoOrder'],
   },
   execute: async (orderInput) => {
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderInput),
+      body: JSON.stringify({ ...orderInput, demoOrderConfirmed: orderInput.confirmDemoOrder }),
     });
     return await res.json();
   },

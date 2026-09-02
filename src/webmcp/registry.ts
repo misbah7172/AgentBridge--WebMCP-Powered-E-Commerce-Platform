@@ -9,6 +9,7 @@ export class WebMCPRegistry {
   private tools: Map<string, WebMCPTool> = new Map();
   private isAuthenticated: boolean = false;
   private currentUser: any = null;
+  private cartItemCount: number = 0;
   private listeners: Set<(tools: RegisteredToolInfo[]) => void> = new Set();
   private executionListeners: Set<(event: { toolName: string; input: any; result: any; timestamp: number }) => void> = new Set();
   private nativeRegisterToolFn: NativeRegisterTool | null = null;
@@ -98,8 +99,19 @@ export class WebMCPRegistry {
   public setAuthState(isAuthenticated: boolean, user: any = null) {
     this.isAuthenticated = isAuthenticated;
     this.currentUser = user;
+    if (!isAuthenticated) this.cartItemCount = 0;
     this.tools.forEach((tool) => this.syncNativeTool(tool));
     this.notifyListeners();
+  }
+
+  public setCartItemCount(itemCount: number) {
+    this.cartItemCount = Number.isFinite(itemCount) && itemCount > 0 ? Math.floor(itemCount) : 0;
+    this.tools.forEach((tool) => this.syncNativeTool(tool));
+    this.notifyListeners();
+  }
+
+  public getCartItemCount(): number {
+    return this.cartItemCount;
   }
 
   public getAuthState(): { isAuthenticated: boolean; user: any } {
@@ -114,12 +126,17 @@ export class WebMCPRegistry {
     const toolsArray = Array.from(this.tools.values());
     for (const tool of toolsArray) {
       const isPublic = tool.permission === 'PUBLIC';
-      const status = isPublic || this.isAuthenticated ? 'AVAILABLE' : 'LOGIN_REQUIRED';
+      const status = !isPublic && !this.isAuthenticated
+        ? 'LOGIN_REQUIRED'
+        : this.isToolStateAvailable(tool)
+          ? 'AVAILABLE'
+          : 'STATE_UNAVAILABLE';
       list.push({
         name: tool.name,
         description: tool.description,
         inputSchema: tool.inputSchema,
         permission: tool.permission,
+        availability: tool.availability,
         category: tool.category,
         status,
       });
@@ -151,6 +168,17 @@ export class WebMCPRegistry {
       return authErrorResponse;
     }
 
+    if (!this.isToolStateAvailable(tool)) {
+      const stateErrorResponse: ToolExecutionResponse = {
+        success: false,
+        error: 'CART_EMPTY',
+        message: `WebMCP tool "${name}" becomes available after the cart contains an item.`,
+        errorDetails: { code: 'CART_EMPTY', message: `WebMCP tool "${name}" becomes available after the cart contains an item.`, retryable: false, userActionRequired: true },
+      };
+      this.notifyExecution(name, input, stateErrorResponse);
+      return stateErrorResponse;
+    }
+
     const inputError = validateInput(tool.inputSchema, input);
     if (inputError) {
       const invalidInput: ToolExecutionResponse = {
@@ -165,6 +193,7 @@ export class WebMCPRegistry {
 
     try {
       const result = await tool.execute(input);
+      this.updateCartStateFromResult(tool, result);
       this.notifyExecution(name, input, result);
       return result;
     } catch (err: any) {
@@ -219,7 +248,7 @@ export class WebMCPRegistry {
   private syncNativeTool(tool: WebMCPTool) {
     if (!this.nativeRegisterToolFn) return;
 
-    const isAvailable = tool.permission === 'PUBLIC' || this.isAuthenticated;
+    const isAvailable = (tool.permission === 'PUBLIC' || this.isAuthenticated) && this.isToolStateAvailable(tool);
     const existingController = this.nativeToolControllers.get(tool.name);
     if (!isAvailable) {
       existingController?.abort();
@@ -251,6 +280,25 @@ export class WebMCPRegistry {
       this.nativeToolControllers.delete(tool.name);
       console.warn(`[WebMCP] Native tool registration for ${tool.name}:`, nativeErr);
     });
+  }
+
+  private isToolStateAvailable(tool: WebMCPTool): boolean {
+    return tool.availability !== 'CART_POPULATED' || this.cartItemCount > 0;
+  }
+
+  private updateCartStateFromResult(tool: WebMCPTool, result: any) {
+    if (!result?.success) return;
+    if (typeof result.cart?.itemCount === 'number') {
+      this.setCartItemCount(result.cart.itemCount);
+      return;
+    }
+    if (typeof result.cartItemCount === 'number') {
+      this.setCartItemCount(result.cartItemCount);
+      return;
+    }
+    if (tool.name === 'create_order' || tool.name === 'clear_cart') {
+      this.setCartItemCount(0);
+    }
   }
 }
 

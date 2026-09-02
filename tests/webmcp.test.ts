@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { prisma } from '../src/lib/db';
 import { webmcpRegistry } from '../src/webmcp/registry';
 import { registerAllWebMCPTools } from '../src/webmcp';
@@ -8,7 +8,13 @@ import { getUserWishlist, addToWishlist, removeFromWishlist } from '../src/lib/s
 import { getUserOrders, getOrderDetails, cancelOrder, createOrder } from '../src/lib/services/orderService';
 import { validateCoupon } from '../src/lib/services/couponService';
 
-describe('WebMCP E-Commerce Platform Test Suite', () => {
+const describeWithDedicatedTestDatabase = process.env.WEBMCP_RUN_INTEGRATION === 'true' ? describe : describe.skip;
+
+// This suite talks to Neon and intentionally exercises real persistence. Keep
+// the default fast unit-test timeout elsewhere, but allow network round trips here.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
+describeWithDedicatedTestDatabase('WebMCP E-Commerce Platform Test Suite', () => {
   let demoUser: any;
   let otherUser: any;
   let sampleProduct: any;

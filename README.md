@@ -1,178 +1,215 @@
-# AgentBridge: WebMCP-Powered E-Commerce Platform
+# AgentBridge
 
-A production-quality, full-stack e-commerce web application engineered for both human shoppers and autonomous AI agents through the **Web Model Context Protocol (WebMCP)**.
+AgentBridge is a demo e-commerce application that exposes browser commerce operations as structured WebMCP tools while retaining a conventional shopper experience.
 
----
+## 1. Project Overview
 
-## 1. Architecture Overview
+Next.js storefront, same-origin APIs, Prisma/PostgreSQL (Neon), and browser-native WebMCP share one server-authoritative commerce model.
 
-AgentBridge implements a unified e-commerce architecture where both the human-facing UI and autonomous AI agents operate against the same domain logic and database.
+## 2. Problem Statement
+
+Visual inference is unreliable for authenticated commerce actions that need validated identifiers, ownership controls, and safe mutations.
+
+## 3. Solution / Approach
+
+Typed browser tools invoke the same APIs as the UI. APIs enforce authentication, validation, authorization, stock, coupon, and order rules.
+
+## 4. What is WebMCP?
+
+WebMCP is an emerging browser API that lets a page register structured tools for authorized agents in the active browser context. This is not a remote MCP server.
+
+## 5. Why WebMCP?
+
+Agents receive stable tool names, schemas, and errors rather than inferring actions from layout. Existing browser sessions and server safeguards remain in effect.
+
+## 6. System Architecture
 
 ```mermaid
-graph TD
-    subgraph Client Layer
-        Browser[Modern Web Browser]
-        HumanUI[E-Commerce UI - Next.js/React]
-        WebMCPIndicator[Subtle WebMCP Indicator]
-        WebMCPRegistry[WebMCP Registry on document.modelContext]
-        AIAgent[Autonomous AI Agent / LLM]
-    end
-
-    subgraph Application & API Layer
-        APIRoutes[Next.js App Router API Routes]
-        AuthService[Auth & Session Service - HTTP-Only JWT]
-        ProductService[Product & Search Service]
-        CartService[Cart & Promotions Service]
-        WishlistService[Wishlist Service]
-        OrderService[Order & Authorization Service]
-        ShippingService[Shipping & Address Service]
-        CouponService[Coupon Validation Engine]
-    end
-
-    subgraph Data Persistence Layer
-        SQLiteDB[(SQLite Database - Prisma ORM)]
-        CatalogSeed[25+ Product Rich Catalog Seed]
-    end
-
-    HumanUI --> APIRoutes
-    AIAgent -->|Discovers & Invokes| WebMCPRegistry
-    WebMCPRegistry --> APIRoutes
-    WebMCPIndicator -.->|Reflects Tool & Auth State| WebMCPRegistry
-    APIRoutes --> AuthService
-    APIRoutes --> ProductService
-    APIRoutes --> CartService
-    APIRoutes --> WishlistService
-    APIRoutes --> OrderService
-    APIRoutes --> ShippingService
-    APIRoutes --> CouponService
-    AuthService --> SQLiteDB
-    ProductService --> SQLiteDB
-    CartService --> SQLiteDB
-    WishlistService --> SQLiteDB
-    OrderService --> SQLiteDB
-    ShippingService --> SQLiteDB
-    CouponService --> SQLiteDB
+flowchart LR
+  A[Human or browser agent] --> B[Next.js UI]
+  A --> C[document.modelContext]
+  C --> D[WebMCP registry]
+  B --> E[Same-origin API routes]
+  D --> E
+  E --> F[Commerce services]
+  F --> G[(PostgreSQL / Neon)]
 ```
 
----
+## 7. Agent ↔ Browser ↔ WebMCP Flow
 
-## 2. Key Features
+1. The browser loads the app with WebMCP headers.
+2. Public tools are exposed; protected tools follow authentication.
+3. The agent discovers available tools and calls one with schema-valid input.
+4. The tool uses the same API as the UI.
+5. Cart responses update UI and state-aware availability.
 
-### For Human Shoppers
-- **Realistic Product Catalog**: 25+ rich hardware models across 9 categories (Laptops, Smartphones, Computer Accessories, Gaming, Headphones, Monitors, Cameras, Smart Devices, Audio).
-- **Fuzzy Search & Autocomplete**: Real-time search with instant dropdown previews.
-- **Multi-Filter & Sorting**: Filter by category, price range, customer ratings, brands, and in-stock status. Sort by popularity, price, rating, or discounts.
-- **Product Detail Views**: Multi-angle image galleries, technical specifications tables, and verified buyer reviews.
-- **Cart & Promo Engine**: Live cart management with promo code engine (`TECH20`, `SAVE10`, `WELCOME15`).
-- **Safe Demo Checkout**: Complete checkout workflow with saved addresses, demo payment card, and instant order creation.
-- **Customer Account Portal**: Order history tracking, live status indicators, order cancellation for eligible processing orders, saved address book, and wishlist management.
+## 8. WebMCP Tools
 
-### For Autonomous AI Agents (WebMCP)
-- **Standardized WebMCP Discovery**: Exposes 22 semantic tools on `document.modelContext`.
-- **Dynamic Authentication State**: Public tools (`search_products`, `filter_products`, `get_product_details`, `get_shipping_estimate`, etc.) are available immediately. Authenticated tools (`add_to_cart`, `get_cart`, `get_order_history`, `cancel_order`, `get_saved_addresses`, etc.) display as `LOGIN_REQUIRED` when unauthenticated and automatically switch to `AVAILABLE` upon login without page refresh.
-- **Structured Error Responses**: Unauthenticated or unauthorized tool calls return machine-readable structured responses:
-  ```json
-  {
-    "success": false,
-    "error": "AUTHENTICATION_REQUIRED",
-    "requiresAuthentication": true,
-    "message": "Authentication is required to perform this action. Please log in to continue."
-  }
-  ```
-- **Strict Authorization Boundary**: Tools accessing sensitive user data verify session ownership on the server (`order.userId === authenticatedUser.id`, `address.userId === authenticatedUser.id`).
-- **Minimal Unobtrusive Indicator**: Sleek floating pill `[↗ WebMCP]` in the bottom-right corner that expands on hover to display registered tools, permission status, schema definitions, and interactive tool tester.
+| Group | Tools |
+| --- | --- |
+| Public | `search_products`, `get_product_details`, `filter_products`, `sort_products`, `get_product_recommendations`, `compare_products`, `check_product_stock`, `get_current_promotions`, `get_available_product_variants`, `get_shipping_estimate` |
+| Cart | `add_to_cart`, `get_cart`, `update_cart_quantity`, `remove_from_cart`, `clear_cart`, `apply_coupon` |
+| Wishlist/account | `add_to_wishlist`, `remove_from_wishlist`, `get_wishlist`, `get_saved_addresses`, `update_shipping_address` |
+| Orders | `get_order_history`, `get_order_details`, `cancel_order`, `create_order` |
 
----
+There are 25 registered tools. See [tool contracts](docs/webmcp-tool-contracts.md).
 
-## 3. WebMCP Tool Directory (22 Registered Tools)
+## 9. Tool Discovery
 
-| Tool Name | Category | Permission | Purpose & Inputs |
-| :--- | :--- | :--- | :--- |
-| `search_products` | Products | **PUBLIC** | Search catalog by keyword, product name, or brand (`query: string`, `limit?: number`) |
-| `get_product_details` | Products | **PUBLIC** | Get full specs, pricing, stock, and reviews (`productId: string`) |
-| `filter_products` | Products | **PUBLIC** | Filter by `category`, `brand`, `minPrice`, `maxPrice`, `minRating`, `inStockOnly` |
-| `sort_products` | Products | **PUBLIC** | Sort by `price_asc`, `price_desc`, `rating`, `popularity`, `newest`, `discount` |
-| `get_product_recommendations` | Products | **PUBLIC** | Smart recommendations by `productId`, `category`, or top-sellers |
-| `compare_products` | Products | **PUBLIC** | Side-by-side spec comparison (`productIds: string[]`) |
-| `check_product_stock` | Products | **PUBLIC** | Real-time stock status and inventory count (`productId: string`) |
-| `get_current_promotions` | Promotions | **PUBLIC** | Retrieve active deals, featured products, and active coupons |
-| `get_available_product_variants` | Products | **PUBLIC** | Retrieve color, storage, RAM, or sizing variants (`productId: string`) |
-| `get_shipping_estimate` | Shipping | **PUBLIC** | Estimate shipping rate and delivery timeline (`zipCode: string`, `weight?: number`) |
-| `add_to_cart` | Cart | **AUTHENTICATED** | Add item to user cart (`productId: string`, `quantity: number`) |
-| `get_cart` | Cart | **AUTHENTICATED** | Retrieve current user cart items, calculations, and discounts |
-| `update_cart_quantity` | Cart | **AUTHENTICATED** | Update item quantity in cart (`productId: string`, `quantity: number`) |
-| `remove_from_cart` | Cart | **AUTHENTICATED** | Remove product from cart (`productId: string`) |
-| `apply_coupon` | Cart | **AUTHENTICATED** | Apply discount coupon code (`code: string`) |
-| `add_to_wishlist` | Wishlist | **AUTHENTICATED** | Add product to wishlist (`productId: string`) |
-| `remove_from_wishlist` | Wishlist | **AUTHENTICATED** | Remove product from wishlist (`productId: string`) |
-| `get_wishlist` | Wishlist | **AUTHENTICATED** | Retrieve user saved wishlist items |
-| `get_saved_addresses` | Account | **AUTHENTICATED** | Retrieve user saved shipping addresses |
-| `update_shipping_address` | Account | **AUTHENTICATED** | Add or update a saved shipping address |
-| `get_order_history` | Orders | **AUTHENTICATED** | Retrieve authenticated user previous orders |
-| `get_order_details` | Orders | **AUTHENTICATED** | Get order details and tracking (`orderId: string`) |
-| `cancel_order` | Orders | **AUTHENTICATED** | Cancel eligible order (`orderId: string`, `reason?: string`) |
-| `create_order` | Orders | **TRANSACTIONAL** | Place order with shipping address and demo card from cart |
+Public tools are immediately available. Protected tools require login. Native registrations are aborted when unavailable; compatible browsers can emit `toolchange`.
 
----
+## 10. Tool Schemas & Contracts
 
-## 4. Evaluation Credentials & Quick Start
+Schemas validate required fields, primitive types, and enums before execution. IDs must come from preceding catalog or account results; callers must not invent them.
 
-### Demo Customer Account
-- **Email**: `demo@agentbridge.io`
-- **Password**: `password123`
-- *(Or click **"1-Click Demo Login"** inside the Sign In modal)*
+## 11. Agent Interaction / User Journeys
 
-### Available Coupons
-- `TECH20` - 20% off all hardware
-- `SAVE10` - 10% off storewide
-- `WELCOME15` - 15% off first order
+Supported journeys include catalog search, product inspection, cart mutation, wishlist/address management, order inspection/cancellation, and demo checkout.
 
----
+## 12. State-Aware Tool Exposure
 
-## 5. Local Development & Installation
+`create_order` is unavailable with an empty cart. It appears only with cart contents and becomes unavailable after order creation or cart clearing. See the [state model](docs/webmcp-state-model.md).
 
-### Prerequisites
-- Node.js 18+ (tested on Node v20/v24)
-- npm 9+
+## 13. Error Handling & Safety
 
-### Setup Steps
-```bash
-# 1. Install dependencies
-npm install
+Structured errors cover unknown tools, invalid input, authentication, unavailable state, and transport failures. APIs remain authoritative for ownership, stock, coupons, and orders.
 
-# 2. Push SQLite schema & generate Prisma client
-npm run db:push
+## 14. Multi-Step Tool Execution
 
-# 3. Seed realistic catalog and demo user
-npm run db:seed
+Evaluation chains use runtime placeholders such as `${resolvedProductId}`. A later call must use an ID returned by an earlier call.
 
-# 4. Run automated test suite
-npm run test
+## 15. Failure & Recovery Handling
 
-# 5. Run autonomous AI agent simulation
-npx tsx scripts/agent-demo.ts
+Agents stop on non-retryable validation, authentication, ownership, and cart-state failures. Transport failures are retryable. Checkout requires `confirmDemoOrder: true`.
 
-# 6. Start development server
-npm run dev
-```
+## 16. Testing Strategy
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Deterministic tests cover tool boundaries, integration tests cover services, browser E2E covers visible state, and optional model evaluation records only measured results.
 
----
+## 17. Deterministic Tests
 
-## 6. Testing Guide
+`npm test` has 22 passing deterministic tests. It covers all 25 tools, request contracts, authentication, invalid input, state transitions, and checkout policy.
 
-Run the comprehensive Vitest test suite:
-```bash
-npm run test
-```
+## 18. LLM / Probabilistic Evaluations
 
-The test suite validates:
-1. Tool registration on `document.modelContext`.
-2. Public tool executions and schema compliance.
-3. Structured rejection of unauthenticated tool executions (`requiresAuthentication: true`).
-4. Dynamic status updates upon login.
-5. Authenticated tool executions for cart, wishlist, and orders.
-6. Ownership authorization checks preventing cross-user data exposure.
-7. Business rules preventing cancellation of shipped/delivered orders.
-8. Shipping calculation and Address management isolation rules.
+`npm run eval:webmcp:llm` uses the OpenAI Responses API when `OPENAI_API_KEY` is configured. It measures selection, arguments, chains, recovery, and latency without executing application tools.
+
+## 19. Browser / E2E Evaluations
+
+`npm run test:webmcp:e2e` resolves a live product from search results, opens details, adds it, verifies the cart, removes it, and verifies empty state. Measured result: **1/1 passed**.
+
+## 20. WebMCP Inspector Validation
+
+Chrome DevTools captures verify `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)`. The user verified tool execution in Model Context Tool Inspector. See [browser validation](docs/webmcp-browser-verification.md).
+
+## 21. Evaluation Metrics
+
+| Metric | Result |
+| --- | --- |
+| Deterministic tests | 22 passed |
+| Dedicated integration run | 23 passed |
+| Dataset schema | 10/10 passed |
+| Browser E2E journey | 1/1 passed |
+| LLM metrics | Not measured; provider key absent |
+
+## 22. Results / Benchmarks
+
+See the measured [final report](docs/webmcp-final-report.md). Results do not claim general model reliability because no provider-backed run is recorded.
+
+## 23. Demo
+
+Start the app, inspect headers, discover public tools, sign in, search, inspect a returned product, add it, inspect the cart, remove it, and optionally demonstrate the confirmation-gated `DEMO_CARD` flow.
+
+## 24. Screenshots / Demo GIF / Video
+
+Header and network captures are in [`docs/evidence/`](docs/evidence). No demo video is included.
+
+## 25. Tech Stack
+
+Next.js 14, React 18, TypeScript, Prisma 5, PostgreSQL/Neon, Vitest, Playwright, and Chrome WebMCP imperative API.
+
+## 26. Project Structure
+
+- `src/app/` pages and API routes
+- `src/webmcp/` registry, tools, schemas, and trace harness
+- `src/lib/` authentication, policy, and commerce services
+- `src/context/` browser auth, cart, and wishlist state
+- `tests/` deterministic, integration, and browser tests
+- `evals/` generic tool-planning datasets
+- `docs/` contracts, evidence, and reports
+
+## 27. Setup & Installation
+
+Prerequisites: Node.js 20+ and a PostgreSQL/Neon URL. Run `npm install`, create `.env` from `.env.example`, then run `npm run db:push` and `npm run db:seed`.
+
+## 28. Environment Variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL/Neon application URL |
+| `JWT_SECRET` | Session signing secret |
+| `TEST_DATABASE_URL` | Preferred isolated integration database |
+| `WEBMCP_TEST_DATABASE` | Required destructive-test acknowledgement |
+| `WEBMCP_ALLOW_SHARED_DATABASE` | Explicit shared demo database permission |
+| `OPENAI_API_KEY` | Optional LLM evaluation provider key |
+
+Use [`.env.test.example`](.env.test.example) for test variables. Never commit secrets.
+
+## 29. Running the Application
+
+Run `npm run dev`, then open `http://localhost:3000`.
+
+## 30. Running Tests
+
+Run `npm test`, `npm run test:webmcp:integration`, and `npm run test:webmcp:e2e`. The integration command resets and seeds its selected database; read [testing guidance](docs/webmcp-testing-environment.md) first.
+
+## 31. Running WebMCP Evaluations
+
+Run `npm run eval:webmcp` for schema validation and `npm run eval:webmcp:llm` for optional provider evaluation.
+
+## 32. Reproducibility
+
+Use tracked migrations, seed data, and a dedicated test database. Browser E2E resolves runtime catalog data and generated evaluation outputs are ignored by Git.
+
+## 33. Security Considerations
+
+- HTTP-only signed sessions are verified by protected API routes.
+- Server ownership checks protect orders and addresses.
+- `tools=(self)` limits WebMCP tools to the same origin.
+- Demo orders require a populated cart, confirmation, and `DEMO_CARD`.
+
+## 34. Limitations
+
+- WebMCP requires compatible Chrome configuration.
+- Product variants are derived from stored specifications, not SKU-level inventory.
+- LLM metrics await a configured provider and recorded run.
+- This is a demo database and checkout flow, not production commerce.
+
+## 35. Future Improvements
+
+Persist SKU variants, provision ephemeral CI databases, compare provider/model runs, automate Inspector checks where supported, and add production payment controls only if scope expands.
+
+## 36. Hackathon Requirements / How the Project Addresses Them
+
+| Requirement | Implementation |
+| --- | --- |
+| Browser-native tools | Imperative `document.modelContext` registration |
+| Typed discovery | Tool names, descriptions, and schemas |
+| Real application state | Shared UI APIs and database |
+| Safe mutations | Authentication, authorization, stock checks, demo checkout gating |
+| Evaluation evidence | Deterministic, integration, E2E, Inspector, and optional LLM runner |
+
+## 37. References
+
+- [Chrome WebMCP Imperative API](https://developer.chrome.com/docs/ai/webmcp/imperative-api)
+- [Chrome WebMCP security guidance](https://developer.chrome.google.cn/docs/ai/webmcp/secure-tools)
+- [Prisma documentation](https://www.prisma.io/docs)
+- [Next.js documentation](https://nextjs.org/docs)
+
+## 38. License
+
+No license file is included. All rights are reserved until a license is added.
+
+## 39. Contributors
+
+- [misbah7172](https://github.com/misbah7172) — project owner and primary contributor.

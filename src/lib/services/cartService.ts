@@ -237,5 +237,6 @@ export async function clearCart(userId: string) {
   await prisma.cartItem.deleteMany({
     where: { cartId: cart.id },
   });
-  return { success: true, message: 'Cart cleared.' };
+  const updatedCart = await getUserCart(userId);
+  return { success: true, message: 'Cart cleared.', cartItemCount: updatedCart.itemCount, cart: updatedCart };
 }
