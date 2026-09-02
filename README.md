@@ -208,7 +208,7 @@ Persist SKU variants, provision ephemeral CI databases, compare provider/model r
 
 ## 38. License
 
-No license file is included. All rights are reserved until a license is added.
+Distributed under the [MIT License](LICENSE).
 
 ## 39. Contributors
 
