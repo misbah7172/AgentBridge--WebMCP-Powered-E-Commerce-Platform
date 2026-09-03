@@ -3,7 +3,7 @@ import { getProducts, getCategories } from '@/lib/services/productService';
 import ProductCard from '@/components/products/ProductCard';
 import FilterSidebar from '@/components/products/FilterSidebar';
 import Link from 'next/link';
-import { Search, ChevronDown, Layers, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown } from 'lucide-react';
 
 export const revalidate = 0;
 
@@ -12,6 +12,7 @@ interface ProductsPageProps {
     q?: string;
     category?: string;
     brand?: string;
+    color?: string;
     minPrice?: string;
     maxPrice?: string;
     minRating?: string;
@@ -27,6 +28,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const query = searchParams.q;
   const category = searchParams.category;
   const brand = searchParams.brand;
+  const color = searchParams.color;
   const minPrice = searchParams.minPrice ? Number(searchParams.minPrice) : undefined;
   const maxPrice = searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined;
   const minRating = searchParams.minRating ? Number(searchParams.minRating) : undefined;
@@ -41,6 +43,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       query,
       category,
       brand,
+      color,
       minPrice,
       maxPrice,
       minRating,
@@ -62,6 +65,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     if (query) params.set('q', query);
     if (category) params.set('category', category);
     if (brand) params.set('brand', brand);
+    if (color) params.set('color', color);
     if (minPrice) params.set('minPrice', String(minPrice));
     if (maxPrice) params.set('maxPrice', String(maxPrice));
     if (minRating) params.set('minRating', String(minRating));
@@ -75,6 +79,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     if (query) params.set('q', query);
     if (category) params.set('category', category);
     if (brand) params.set('brand', brand);
+    if (color) params.set('color', color);
     if (minPrice) params.set('minPrice', String(minPrice));
     if (maxPrice) params.set('maxPrice', String(maxPrice));
     if (minRating) params.set('minRating', String(minRating));
@@ -84,36 +89,47 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     return `/products?${params.toString()}`;
   };
 
+  const getTitle = () => {
+    if (query) return `Search: "${query}"`;
+    if (color) return `${color} Colorway Archive`;
+    if (category) {
+      const match = categories.find((c) => c.slug === category);
+      return match ? match.name : category.replace(/-/g, ' ');
+    }
+    return 'The Atelier Archive';
+  };
+
   return (
-    <div className="container" style={{ padding: '32px 20px' }}>
-      {/* Breadcrumb / Title Bar */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-          <Link href="/" style={{ color: 'var(--text-secondary)' }}>Home</Link> &gt; <span>Catalog</span>
-          {category && <span style={{ textTransform: 'capitalize' }}> &gt; {category}</span>}
+    <div className="container" style={{ paddingTop: '40px', paddingBottom: '80px' }}>
+      {/* Breadcrumb & Title Masthead */}
+      <div style={{ marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
+        <div style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          <Link href="/" style={{ color: 'var(--text-secondary)' }}>Atelier</Link> / <span>Catalog</span>
+          {category && <span> / {category.replace(/-/g, ' ')}</span>}
+          {color && <span> / {color}</span>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
           <div>
-            <h1 className="h2" style={{ color: '#f8fafc' }}>
-              {query ? `Search: "${query}"` : category ? `${category.charAt(0).toUpperCase() + category.slice(1)}` : 'All Hardware & Systems'}
+            <h1 className="h1" style={{ fontSize: '2.4rem', fontWeight: 400, textTransform: 'capitalize', color: 'var(--text-primary)' }}>
+              {getTitle()}
             </h1>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Showing {products.length} of {total} products
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Showing {products.length} of {total} curated garments
             </div>
           </div>
 
-          {/* Sort Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <ArrowUpDown size={14} /> Sort By:
+          {/* Minimalist Sort Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ArrowUpDown size={12} /> Sort:
             </span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {[
                 { label: 'Popularity', value: 'popularity' },
                 { label: 'Price: Low-High', value: 'price_asc' },
                 { label: 'Price: High-Low', value: 'price_desc' },
-                { label: 'Top Rating', value: 'rating' },
-                { label: 'Top Discount', value: 'discount' },
+                { label: 'Rating', value: 'rating' },
               ].map((s) => {
                 const isActive = sort === s.value;
                 return (
@@ -123,11 +139,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     style={{
                       padding: '5px 10px',
                       borderRadius: 'var(--radius-sm)',
-                      border: isActive ? '1px solid var(--brand-primary)' : '1px solid var(--border-subtle)',
-                      backgroundColor: isActive ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
-                      color: isActive ? '#93c5fd' : 'var(--text-secondary)',
-                      fontSize: '0.75rem',
+                      border: isActive ? '1px solid var(--text-primary)' : '1px solid var(--border-medium)',
+                      backgroundColor: isActive ? 'var(--text-primary)' : '#ffffff',
+                      color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '0.6875rem',
                       fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
                       textDecoration: 'none',
                     }}
                   >
@@ -140,28 +158,28 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
       </div>
 
-      {/* Main Content Layout: Sidebar + Grid */}
-      <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+      {/* Main Content Layout: Sidebar + Wide Grid */}
+      <div className="products-layout" style={{ display: 'flex', gap: '36px', alignItems: 'flex-start' }}>
         <FilterSidebar categories={categories} />
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {products.length === 0 ? (
             <div
               style={{
-                backgroundColor: 'var(--bg-card)',
+                backgroundColor: '#ffffff',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '60px 24px',
+                borderRadius: 'var(--radius-sm)',
+                padding: '64px 24px',
                 textAlign: 'center',
                 color: 'var(--text-secondary)',
               }}
             >
-              <Search size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                No matching hardware found
+              <Search size={36} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                No Matching Pieces Found
               </div>
-              <p style={{ fontSize: '0.875rem', maxWidth: '400px', margin: '0 auto 20px' }}>
-                Try adjusting your search query, clearing filters, or browsing other categories.
+              <p style={{ fontSize: '0.875rem', maxWidth: '380px', margin: '0 auto 24px', color: 'var(--text-muted)' }}>
+                Try relaxing your filter parameters, searching for a different colorway, or exploring all collections.
               </p>
               <Link href="/products" className="btn btn-primary btn-sm">
                 Reset All Filters
@@ -173,8 +191,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                  gap: '20px',
-                  marginBottom: '36px',
+                  gap: '24px',
+                  marginBottom: '48px',
                 }}
               >
                 {products.map((p) => (
@@ -182,9 +200,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 ))}
               </div>
 
-              {/* Pagination */}
+              {/* Minimal Pagination */}
               {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', alignItems: 'center' }}>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => {
                     const isCurrent = pNum === page;
                     return (
@@ -197,12 +215,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: 'var(--radius-md)',
-                          border: isCurrent ? '1px solid var(--brand-primary)' : '1px solid var(--border-subtle)',
-                          backgroundColor: isCurrent ? 'var(--brand-primary)' : 'var(--bg-card)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: isCurrent ? '1px solid var(--text-primary)' : '1px solid var(--border-medium)',
+                          backgroundColor: isCurrent ? 'var(--text-primary)' : '#ffffff',
                           color: isCurrent ? '#ffffff' : 'var(--text-primary)',
                           fontWeight: 600,
-                          fontSize: '0.875rem',
+                          fontSize: '0.75rem',
                           textDecoration: 'none',
                         }}
                       >

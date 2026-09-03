@@ -14,12 +14,11 @@ import {
   User as UserIcon,
   LogOut,
   Package,
-  Layers,
-  Columns,
   Sparkles,
   ChevronDown,
-  Cpu,
   ArrowRight,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -31,27 +30,42 @@ export default function Navbar() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Live search debounce
+  // Close suggestions and user menu on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search autocomplete
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSuggestions([]);
-      setIsSearching(false);
       return;
     }
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(`/api/products?q=${encodeURIComponent(searchQuery)}&limit=5`);
+        const res = await fetch(`/api/products?q=${encodeURIComponent(searchQuery.trim())}&limit=5`);
         const data = await res.json();
-        if (data.success) {
-          setSuggestions(data.products || []);
+        if (data.success && Array.isArray(data.products)) {
+          setSuggestions(data.products);
         }
       } catch {
         setSuggestions([]);
@@ -63,24 +77,11 @@ export default function Navbar() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Click outside listeners
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setIsSearchOpen(false);
+      setIsMobileMenuOpen(false);
       router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -91,247 +92,233 @@ export default function Navbar() {
         position: 'sticky',
         top: 0,
         zIndex: 800,
-        backgroundColor: 'rgba(10, 13, 20, 0.94)',
-        backdropFilter: 'blur(12px)',
+        backgroundColor: 'rgba(251, 250, 248, 0.95)',
+        backdropFilter: 'blur(10px)',
         borderBottom: '1px solid var(--border-subtle)',
       }}
     >
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px', gap: '24px' }}>
-        {/* Brand Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div
+      <div
+        className="container"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: '68px',
+          gap: '24px',
+        }}
+      >
+        {/* Left: Mobile Hamburger & Brand Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Mobile Hamburger Toggle (Visible on < 900px) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="navbar-mobile-toggle"
+            aria-label="Toggle Navigation Menu"
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: 'var(--radius-md)',
-              background: 'linear-gradient(135deg, #d4af37 0%, #c5a059 50%, #38bdf8 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 0 15px rgba(212, 175, 55, 0.35)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              display: 'none',
+              padding: '6px',
             }}
           >
-            <Sparkles size={20} />
-          </div>
-          <div>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
-              Agent<span style={{ color: '#d4af37' }}>Bridge</span>
-            </span>
-            <span style={{ display: 'block', fontSize: '0.625rem', fontWeight: 700, color: '#c5a059', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-              Atelier & Apparel
-            </span>
-          </div>
-        </Link>
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
 
-        {/* Search Bar with Live Suggestions */}
-        <div ref={searchRef} style={{ flex: 1, maxWidth: '520px', position: 'relative' }}>
-          <form onSubmit={handleSearchSubmit}>
-            <div style={{ position: 'relative' }}>
-              <Search
-                size={16}
-                color="#64748b"
-                style={{ position: 'absolute', left: '14px', top: '12px' }}
-              />
-              <input
-                type="text"
-                placeholder="Search silk blouses, pima cotton tees, tailored denim, colors..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsSearchOpen(true);
-                }}
-                onFocus={() => setIsSearchOpen(true)}
-                className="input"
-                style={{
-                  paddingLeft: '40px',
-                  paddingRight: '14px',
-                  backgroundColor: 'var(--bg-card)',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.875rem',
-                }}
-              />
-            </div>
-          </form>
-
-          {/* Autocomplete Dropdown */}
-          {isSearchOpen && (suggestions.length > 0 || isSearching) && (
-            <div
+          {/* Architectural Brand Wordmark */}
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
+            <span
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                left: 0,
-                right: 0,
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-medium)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-lg)',
-                overflow: 'hidden',
-                zIndex: 850,
+                fontFamily: 'var(--font-sans)',
+                fontSize: '1.0625rem',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                color: 'var(--text-primary)',
+                textTransform: 'uppercase',
+                lineHeight: 1.1,
               }}
             >
-              {isSearching && (
-                <div style={{ padding: '12px 16px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                  Searching catalog...
-                </div>
-              )}
-              {suggestions.map((p) => {
-                const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
-                const price = p.discountPercent > 0 ? p.price * (1 - p.discountPercent / 100) : p.price;
-                return (
-                  <Link
-                    key={p.id}
-                    href={`/products/${p.slug}`}
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchQuery('');
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px 14px',
-                      borderBottom: '1px solid var(--border-subtle)',
-                      transition: 'background 0.15s ease',
-                      textDecoration: 'none',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {img && (
-                      <img
-                        src={img}
-                        alt={p.name}
-                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
-                      />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: '0.8125rem',
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {p.name}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {p.brand} • ${price.toFixed(2)}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-              {searchQuery && (
-                <Link
-                  href={`/products?q=${encodeURIComponent(searchQuery)}`}
-                  onClick={() => setIsSearchOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 16px',
-                    backgroundColor: 'var(--bg-card)',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    color: 'var(--brand-primary)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <span>See all results for &quot;{searchQuery}&quot;</span>
-                  <ArrowRight size={14} />
-                </Link>
-              )}
-            </div>
-          )}
+              AgentBridge
+            </span>
+            <span
+              style={{
+                fontSize: '0.5625rem',
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.28em',
+                textTransform: 'uppercase',
+                marginTop: '2px',
+              }}
+            >
+              Atelier
+            </span>
+          </Link>
         </div>
 
-        {/* Navigation Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Women Link */}
+        {/* Center: Desktop Department Links */}
+        <nav
+          className="navbar-desktop-nav"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '28px',
+          }}
+        >
           <Link
             href="/products?category=womens-tops"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              transition: 'color 0.15s ease',
-            }}
+            className="nav-editorial-link"
           >
-            <span>Women</span>
+            Women
           </Link>
-
-          {/* Men Link */}
           <Link
             href="/products?category=mens-tshirts"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              transition: 'color 0.15s ease',
-            }}
+            className="nav-editorial-link"
           >
-            <span>Men</span>
+            Men
           </Link>
-
-          {/* Denim Link */}
           <Link
             href="/products?q=jeans"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              transition: 'color 0.15s ease',
-            }}
+            className="nav-editorial-link"
           >
-            <span>Denim</span>
+            Denim
           </Link>
-
-          {/* Compare Link */}
           <Link
             href="/compare"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              transition: 'color 0.15s ease',
-            }}
+            className="nav-editorial-link"
           >
-            <Columns size={16} />
-            <span>Compare</span>
+            Compare
           </Link>
-
-          {/* Catalog Link */}
           <Link
             href="/products"
+            className="nav-editorial-link"
+          >
+            Catalog
+          </Link>
+        </nav>
+
+        {/* Right Actions: Search + Ask AI + Wishlist + Cart + Account */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Desktop Search Bar */}
+          <div ref={searchRef} className="navbar-search-desktop" style={{ width: '220px', position: 'relative' }}>
+            <form onSubmit={handleSearchSubmit}>
+              <div style={{ position: 'relative' }}>
+                <Search
+                  size={14}
+                  color="#8c8883"
+                  style={{ position: 'absolute', left: '10px', top: '10px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search atelier..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 32px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.75rem',
+                    letterSpacing: '0.04em',
+                    outline: 'none',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+            </form>
+
+            {/* Autocomplete Dropdown */}
+            {isSearchOpen && (suggestions.length > 0 || isSearching) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: 'var(--shadow-md)',
+                  overflow: 'hidden',
+                  zIndex: 850,
+                }}
+              >
+                {isSearching && (
+                  <div style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Searching collection...
+                  </div>
+                )}
+                {suggestions.map((p) => {
+                  const img = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
+                  const price = p.discountPercent > 0 ? p.price * (1 - p.discountPercent / 100) : p.price;
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/products/${p.slug}`}
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setSearchQuery('');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {img && (
+                        <img
+                          src={img}
+                          alt={p.name}
+                          style={{ width: '28px', height: '36px', objectFit: 'cover', borderRadius: '1px' }}
+                        />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                          ${price.toFixed(2)}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Understated Rectangular Ask AI Button */}
+          <button
+            onClick={toggleAskAI}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '0.875rem',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'transparent',
+              border: '1px solid var(--text-primary)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
               fontWeight: 600,
-              color: 'var(--text-secondary)',
-              transition: 'color 0.15s ease',
+              fontSize: '0.6875rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              transition: 'all 0.15s ease',
             }}
+            title="Open Conversational WebMCP Shopping Assistant"
           >
-            <Layers size={16} />
-            <span>Catalog</span>
-          </Link>
+            <Sparkles size={12} />
+            <span>Ask AI</span>
+          </button>
 
           {/* Wishlist Link */}
           <Link
@@ -347,11 +334,8 @@ export default function Navbar() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-subtle)',
+              width: '36px',
+              height: '36px',
               color: 'var(--text-primary)',
             }}
             title="Wishlist"
@@ -361,14 +345,14 @@ export default function Navbar() {
               <span
                 style={{
                   position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  backgroundColor: '#ef4444',
+                  top: '2px',
+                  right: '2px',
+                  backgroundColor: 'var(--text-primary)',
                   color: '#ffffff',
-                  fontSize: '0.6875rem',
+                  fontSize: '0.5625rem',
                   fontWeight: 700,
-                  width: '18px',
-                  height: '18px',
+                  width: '15px',
+                  height: '15px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -379,43 +363,6 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-
-          {/* Ask AI Trigger Button */}
-          <button
-            onClick={toggleAskAI}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '7px',
-              padding: '7px 14px',
-              borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(56, 189, 248, 0.15) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.45)',
-              color: '#f8fafc',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '0.8125rem',
-              boxShadow: '0 0 14px rgba(212, 175, 55, 0.15)',
-              transition: 'all 0.2s ease',
-            }}
-            title="Open Ask AI Shopping Assistant (Voice & Text)"
-          >
-            <Sparkles size={15} color="#d4af37" />
-            <span>Ask AI</span>
-            <span
-              style={{
-                fontSize: '0.625rem',
-                backgroundColor: '#d4af37',
-                color: '#090c13',
-                fontWeight: 800,
-                padding: '1px 5px',
-                borderRadius: '4px',
-                letterSpacing: '0.04em',
-              }}
-            >
-              VOICE
-            </span>
-          </button>
 
           {/* Cart Trigger */}
           <button
@@ -430,28 +377,33 @@ export default function Navbar() {
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '8px 14px',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-subtle)',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              background: 'transparent',
+              border: 'none',
               color: 'var(--text-primary)',
               cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.875rem',
             }}
+            title="Shopping Bag"
           >
-            <ShoppingBag size={18} color="#60a5fa" />
-            <span>Cart</span>
+            <ShoppingBag size={18} />
             {cart.itemCount > 0 && (
               <span
                 style={{
-                  backgroundColor: 'var(--brand-primary)',
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  backgroundColor: 'var(--text-primary)',
                   color: '#ffffff',
-                  fontSize: '0.6875rem',
+                  fontSize: '0.5625rem',
                   fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: '10px',
+                  width: '15px',
+                  height: '15px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 {cart.itemCount}
@@ -467,43 +419,37 @@ export default function Navbar() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  color: '#f8fafc',
+                  gap: '6px',
+                  padding: '6px 8px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
-                  fontSize: '0.8125rem',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
+                  letterSpacing: '0.04em',
                 }}
               >
-                <div
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--brand-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <span>{user.name.split(' ')[0]}</span>
-                <ChevronDown size={14} color="#94a3b8" />
+                <UserIcon size={18} />
+                <ChevronDown size={12} />
               </button>
             ) : (
               <button
                 onClick={() => openAuthModal('login')}
-                className="btn btn-primary btn-sm"
-                style={{ gap: '6px' }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                }}
+                title="Sign In"
               >
-                <UserIcon size={14} />
-                <span>Sign In</span>
+                <UserIcon size={18} />
               </button>
             )}
 
@@ -512,73 +458,222 @@ export default function Navbar() {
               <div
                 style={{
                   position: 'absolute',
-                  top: 'calc(100% + 8px)',
                   right: 0,
+                  top: 'calc(100% + 8px)',
                   width: '200px',
-                  backgroundColor: 'var(--bg-secondary)',
+                  backgroundColor: '#ffffff',
                   border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'var(--shadow-lg)',
-                  overflow: 'hidden',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: 'var(--shadow-md)',
                   zIndex: 850,
-                  padding: '6px 0',
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {user.name}
                   </div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{user.email}</div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                    {user.email}
+                  </div>
                 </div>
 
-                <Link
-                  href="/account"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 14px',
-                    fontSize: '0.8125rem',
-                    color: 'var(--text-secondary)',
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <Package size={14} />
-                  <span>My Orders & Profile</span>
-                </Link>
+                <div style={{ padding: '6px 0' }}>
+                  <Link
+                    href="/account?tab=profile"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <UserIcon size={14} /> Profile &amp; Addresses
+                  </Link>
+                  <Link
+                    href="/account?tab=orders"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Package size={14} /> Orders Archive
+                  </Link>
+                  <Link
+                    href="/account?tab=wishlist"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Heart size={14} /> Saved Items
+                  </Link>
+                </div>
 
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    logout();
-                  }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 14px',
-                    fontSize: '0.8125rem',
-                    color: '#f87171',
-                    background: 'transparent',
-                    border: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <LogOut size={14} />
-                  <span>Sign Out</span>
-                </button>
+                <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '6px 0' }}>
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--danger)',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <LogOut size={14} /> Sign Out
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Mobile Slide-Out Drawer (Visible when hamburger is open) */}
+      {isMobileMenuOpen && (
+        <div
+          style={{
+            backgroundColor: 'var(--bg-primary)',
+            borderTop: '1px solid var(--border-subtle)',
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          {/* Mobile Search */}
+          <form onSubmit={handleSearchSubmit}>
+            <div style={{ position: 'relative' }}>
+              <Search
+                size={14}
+                color="#8c8883"
+                style={{ position: 'absolute', left: '12px', top: '12px' }}
+              />
+              <input
+                type="text"
+                placeholder="Search collection..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px 10px 36px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.8125rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </form>
+
+          {/* Mobile Navigation Links */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '8px' }}>
+            <Link
+              href="/products?category=womens-tops"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              Women&apos;s Tops
+            </Link>
+            <Link
+              href="/products?category=mens-tshirts"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              Men&apos;s Luxury Tees
+            </Link>
+            <Link
+              href="/products?q=jeans"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              Tailored Denim
+            </Link>
+            <Link
+              href="/compare"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              Compare Cuts
+            </Link>
+            <Link
+              href="/products"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              Full Catalog
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Embedded CSS for responsive breakpoint handling */}
+      <style jsx>{`
+        .nav-editorial-link {
+          font-size: 0.75rem;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.14em;
+          color: var(--text-secondary);
+          position: relative;
+          padding: 4px 0;
+        }
+        .nav-editorial-link:hover {
+          color: var(--text-primary);
+        }
+        .nav-editorial-link:after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 0;
+          height: 1px;
+          background-color: var(--text-primary);
+          transition: width 0.2s ease;
+        }
+        .nav-editorial-link:hover:after {
+          width: 100%;
+        }
+
+        @media (max-width: 900px) {
+          .navbar-desktop-nav {
+            display: none !important;
+          }
+          .navbar-search-desktop {
+            display: none !important;
+          }
+          :global(.navbar-mobile-toggle) {
+            display: block !important;
+          }
+        }
+      `}</style>
     </header>
   );
 }

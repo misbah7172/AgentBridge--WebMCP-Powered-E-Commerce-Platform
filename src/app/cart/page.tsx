@@ -12,8 +12,6 @@ import {
   ArrowRight,
   Tag,
   ShieldCheck,
-  Truck,
-  RotateCcw,
 } from 'lucide-react';
 
 export default function CartPage() {
@@ -25,13 +23,13 @@ export default function CartPage() {
 
   if (!user) {
     return (
-      <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
-        <ShoppingBag size={56} color="#60a5fa" style={{ margin: '0 auto 20px' }} />
-        <h1 className="h2" style={{ color: '#f8fafc', marginBottom: '12px' }}>
-          Please Sign In to View Your Cart
+      <div className="container" style={{ padding: '96px 20px', textAlign: 'center' }}>
+        <ShoppingBag size={48} color="var(--text-muted)" style={{ margin: '0 auto 20px' }} />
+        <h1 className="h1" style={{ fontSize: '2rem', marginBottom: '12px' }}>
+          Please Sign In to View Your Bag
         </h1>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '450px', margin: '0 auto 24px', fontSize: '0.9375rem' }}>
-          Sign in or create an account to view and manage your shopping cart items across devices.
+        <p style={{ color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 28px', fontSize: '0.875rem', lineHeight: 1.6 }}>
+          Sign in or create an account to view and manage your selected garments across all devices.
         </p>
         <button onClick={() => openAuthModal('login')} className="btn btn-primary btn-lg">
           Sign In / Register
@@ -51,45 +49,45 @@ export default function CartPage() {
   };
 
   return (
-    <div className="container" style={{ padding: '36px 20px' }}>
+    <div className="container" style={{ paddingTop: '40px', paddingBottom: '96px' }}>
       {/* Title */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 className="h2" style={{ color: '#f8fafc' }}>
-          Shopping Cart ({cart.itemCount} {cart.itemCount === 1 ? 'item' : 'items'})
+      <div style={{ marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '18px' }}>
+        <h1 className="h1" style={{ fontSize: '2.4rem' }}>
+          Shopping Bag ({cart.itemCount} {cart.itemCount === 1 ? 'garment' : 'garments'})
         </h1>
       </div>
 
       {cart.items.length === 0 ? (
         <div
           style={{
-            backgroundColor: 'var(--bg-card)',
+            backgroundColor: '#ffffff',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '60px 24px',
+            borderRadius: 'var(--radius-sm)',
+            padding: '64px 24px',
             textAlign: 'center',
             color: 'var(--text-secondary)',
           }}
         >
-          <ShoppingBag size={48} color="#64748b" style={{ margin: '0 auto 16px' }} />
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-            Your shopping cart is currently empty
+          <ShoppingBag size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            Your Shopping Bag is Empty
           </div>
-          <p style={{ fontSize: '0.875rem', maxWidth: '400px', margin: '0 auto 24px' }}>
-            Browse our hardware catalog and add laptops, accessories, monitors, and audio gear.
+          <p style={{ fontSize: '0.875rem', maxWidth: '380px', margin: '0 auto 24px', color: 'var(--text-muted)' }}>
+            Discover Mulberry silk blouses, Supima cotton tees, and Japanese selvedge denim in our archive.
           </p>
-          <Link href="/products" className="btn btn-primary">
-            Browse Product Catalog
+          <Link href="/products" className="btn btn-primary btn-sm">
+            Explore Atelier Catalog
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '36px', alignItems: 'flex-start' }}>
           {/* Left: Items Table */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div
               style={{
-                backgroundColor: 'var(--bg-card)',
+                backgroundColor: '#ffffff',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
+                borderRadius: 'var(--radius-sm)',
                 overflow: 'hidden',
               }}
             >
@@ -113,23 +111,25 @@ export default function CartPage() {
                         src={item.product.image}
                         alt={item.product.name}
                         style={{
-                          width: '80px',
-                          height: '80px',
+                          width: '72px',
+                          height: '90px',
                           objectFit: 'cover',
-                          borderRadius: 'var(--radius-md)',
-                          backgroundColor: 'var(--bg-surface)',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--bg-secondary)',
                         }}
                       />
                     )}
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.product.brand}</div>
+                      <div style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>
+                        {item.product.brand}
+                      </div>
                       <Link
                         href={`/products/${item.product.slug}`}
-                        style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}
+                        style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', margin: '2px 0 4px' }}
                       >
                         {item.product.name}
                       </Link>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--brand-primary)' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                         ${item.product.discountedPrice.toFixed(2)}
                         {item.product.discountPercent > 0 && (
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'line-through', marginLeft: '6px' }}>
@@ -145,11 +145,11 @@ export default function CartPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      backgroundColor: 'var(--bg-surface)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '4px 8px',
+                      gap: '6px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid var(--border-medium)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '3px 8px',
                     }}
                   >
                     <button
@@ -159,14 +159,14 @@ export default function CartPage() {
                         border: 'none',
                         color: 'var(--text-secondary)',
                         cursor: 'pointer',
-                        padding: '4px',
+                        padding: '2px 4px',
                         display: 'flex',
                         alignItems: 'center',
                       }}
                     >
-                      <Minus size={14} />
+                      <Minus size={12} />
                     </button>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600, minWidth: '24px', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, minWidth: '20px', textAlign: 'center' }}>
                       {item.quantity}
                     </span>
                     <button
@@ -176,18 +176,18 @@ export default function CartPage() {
                         border: 'none',
                         color: 'var(--text-secondary)',
                         cursor: 'pointer',
-                        padding: '4px',
+                        padding: '2px 4px',
                         display: 'flex',
                         alignItems: 'center',
                       }}
                     >
-                      <Plus size={14} />
+                      <Plus size={12} />
                     </button>
                   </div>
 
                   {/* Total & Delete */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', minWidth: '80px', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', minWidth: '80px', textAlign: 'right' }}>
                       ${item.itemTotal.toFixed(2)}
                     </div>
                     <button
@@ -195,24 +195,24 @@ export default function CartPage() {
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--text-muted)',
                         cursor: 'pointer',
                         padding: '6px',
                         display: 'flex',
                         alignItems: 'center',
                       }}
-                      title="Remove item"
+                      title="Remove piece"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px' }}>
               <Link href="/products" className="btn btn-outline btn-sm">
-                &larr; Continue Shopping
+                &larr; Continue Perusing Archive
               </Link>
             </div>
           </div>
@@ -222,34 +222,34 @@ export default function CartPage() {
             style={{
               width: '380px',
               maxWidth: '100%',
-              backgroundColor: 'var(--bg-card)',
+              backgroundColor: '#ffffff',
               border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '24px',
+              borderRadius: 'var(--radius-sm)',
+              padding: '28px',
               display: 'flex',
               flexDirection: 'column',
               gap: '20px',
             }}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 500, color: 'var(--text-primary)' }}>
               Order Summary
             </h2>
 
             {/* Coupon Application */}
-            <form onSubmit={handleApplyCoupon} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <form onSubmit={handleApplyCoupon} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
                 Promo / Coupon Code
               </label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
-                  <Tag size={14} color="#64748b" style={{ position: 'absolute', left: '10px', top: '12px' }} />
+                  <Tag size={13} color="#8c8883" style={{ position: 'absolute', left: '10px', top: '11px' }} />
                   <input
                     type="text"
-                    placeholder="e.g. TECH20"
+                    placeholder="e.g. SAVE10"
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value)}
                     className="input"
-                    style={{ paddingLeft: '32px', fontSize: '0.8125rem', textTransform: 'uppercase' }}
+                    style={{ paddingLeft: '32px', fontSize: '0.75rem', textTransform: 'uppercase' }}
                   />
                 </div>
                 <button type="submit" disabled={applying || !couponInput} className="btn btn-secondary btn-sm">
@@ -257,33 +257,33 @@ export default function CartPage() {
                 </button>
               </div>
               {couponMsg && (
-                <div style={{ fontSize: '0.75rem', color: couponMsg.success ? '#34d399' : '#f87171', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.75rem', color: couponMsg.success ? 'var(--success)' : 'var(--danger)', fontWeight: 500 }}>
                   {couponMsg.text}
                 </div>
               )}
             </form>
 
             {/* Price Calculations */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.875rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8125rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>Subtotal</span>
                 <span>${cart.subtotal.toFixed(2)}</span>
               </div>
               {cart.couponDiscount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success)' }}>
                   <span>Coupon Discount</span>
                   <span>-${cart.couponDiscount.toFixed(2)}</span>
                 </div>
               )}
               {cart.productSavings > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399' }}>
-                  <span>Product Savings</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success)' }}>
+                  <span>Seasonal Savings</span>
                   <span>-${cart.productSavings.toFixed(2)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                <span>Estimated Shipping</span>
-                <span>{cart.shippingFee === 0 ? 'FREE' : `$${cart.shippingFee.toFixed(2)}`}</span>
+                <span>Shipping</span>
+                <span>{cart.shippingFee === 0 ? 'COMPLIMENTARY' : `$${cart.shippingFee.toFixed(2)}`}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>Estimated Tax (8%)</span>
@@ -295,19 +295,19 @@ export default function CartPage() {
                   justifyContent: 'space-between',
                   paddingTop: '12px',
                   borderTop: '1px solid var(--border-subtle)',
-                  fontWeight: 800,
-                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  fontSize: '1.15rem',
                   color: 'var(--text-primary)',
                 }}
               >
-                <span>Total</span>
-                <span style={{ color: 'var(--brand-primary)' }}>${cart.estimatedTotal.toFixed(2)}</span>
+                <span>Estimated Total</span>
+                <span>${cart.estimatedTotal.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Checkout CTA */}
             <Link href="/checkout" className="btn btn-primary btn-lg" style={{ width: '100%', gap: '8px' }}>
-              Proceed to Demo Checkout <ArrowRight size={18} />
+              Proceed to Secure Checkout <ArrowRight size={14} />
             </Link>
 
             <div
@@ -316,11 +316,11 @@ export default function CartPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                fontSize: '0.75rem',
+                fontSize: '0.6875rem',
                 color: 'var(--text-muted)',
               }}
             >
-              <ShieldCheck size={14} color="#10b981" /> Safe demonstration environment
+              <ShieldCheck size={13} color="var(--text-primary)" /> Safe WebMCP-Powered Checkout Mode
             </div>
           </div>
         </div>

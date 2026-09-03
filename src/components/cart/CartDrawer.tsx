@@ -28,14 +28,14 @@ export default function CartDrawer() {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '420px',
+          width: '440px',
           maxWidth: '100vw',
           height: '100vh',
-          backgroundColor: 'var(--bg-secondary)',
-          borderLeft: '1px solid var(--border-medium)',
+          backgroundColor: '#ffffff',
+          borderLeft: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--shadow-lg)',
+          boxShadow: '-8px 0 30px rgba(0, 0, 0, 0.08)',
           animation: 'slideInRight 0.25s ease-out',
         }}
       >
@@ -58,14 +58,17 @@ export default function CartDrawer() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            backgroundColor: 'var(--bg-primary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ShoppingBag size={20} color="#60a5fa" />
+            <ShoppingBag size={18} color="var(--text-primary)" />
             <div>
-              <div style={{ fontSize: '1.125rem', fontWeight: 700 }}>Your Shopping Cart</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                {cart.itemCount} {cart.itemCount === 1 ? 'item' : 'items'}
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Shopping Bag
+              </div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                {cart.itemCount} {cart.itemCount === 1 ? 'garment' : 'garments'}
               </div>
             </div>
           </div>
@@ -79,23 +82,23 @@ export default function CartDrawer() {
               padding: '6px',
             }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Cart Item List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {cart.items.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
-              <ShoppingBag size={48} color="#475569" style={{ margin: '0 auto 16px' }} />
-              <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                Your cart is empty
+            <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
+              <ShoppingBag size={40} color="var(--text-muted)" style={{ margin: '0 auto 16px' }} />
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                Your bag is empty
               </div>
-              <p style={{ fontSize: '0.875rem', marginBottom: '24px' }}>
-                Discover innovative hardware and gear in our catalog.
+              <p style={{ fontSize: '0.8125rem', maxWidth: '280px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                Explore the latest silk blouses, luxury tees, and tailored denim.
               </p>
               <Link href="/products" onClick={closeDrawer} className="btn btn-primary btn-sm">
-                Explore Catalog
+                Explore Atelier
               </Link>
             </div>
           ) : (
@@ -105,10 +108,10 @@ export default function CartDrawer() {
                 style={{
                   display: 'flex',
                   gap: '14px',
-                  padding: '12px',
-                  backgroundColor: 'var(--bg-card)',
+                  padding: '14px',
+                  backgroundColor: '#ffffff',
                   border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
+                  borderRadius: 'var(--radius-sm)',
                 }}
               >
                 {item.product.image && (
@@ -116,22 +119,24 @@ export default function CartDrawer() {
                     src={item.product.image}
                     alt={item.product.name}
                     style={{
-                      width: '72px',
-                      height: '72px',
+                      width: '70px',
+                      height: '85px',
                       objectFit: 'cover',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: 'var(--bg-surface)',
+                      backgroundColor: 'var(--bg-secondary)',
                     }}
                   />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.product.brand}</div>
+                  <div style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
+                    {item.product.brand}
+                  </div>
                   <Link
                     href={`/products/${item.product.slug}`}
                     onClick={closeDrawer}
                     style={{
                       display: 'block',
-                      fontSize: '0.875rem',
+                      fontSize: '0.8125rem',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       whiteSpace: 'nowrap',
@@ -142,7 +147,7 @@ export default function CartDrawer() {
                   >
                     {item.product.name}
                   </Link>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--brand-primary)' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                     ${item.product.discountedPrice.toFixed(2)}
                     {item.product.discountPercent > 0 && (
                       <span
@@ -159,16 +164,16 @@ export default function CartDrawer() {
                   </div>
 
                   {/* Quantity and Remove */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px' }}>
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        backgroundColor: 'var(--bg-surface)',
-                        border: '1px solid var(--border-subtle)',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid var(--border-medium)',
                         borderRadius: 'var(--radius-sm)',
-                        padding: '2px',
+                        padding: '2px 6px',
                       }}
                     >
                       <button
@@ -178,14 +183,14 @@ export default function CartDrawer() {
                           border: 'none',
                           color: 'var(--text-secondary)',
                           cursor: 'pointer',
-                          padding: '4px 6px',
+                          padding: '2px 4px',
                           display: 'flex',
                           alignItems: 'center',
                         }}
                       >
-                        <Minus size={12} />
+                        <Minus size={11} />
                       </button>
-                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, minWidth: '16px', textAlign: 'center', color: 'var(--text-primary)' }}>
                         {item.quantity}
                       </span>
                       <button
@@ -195,12 +200,12 @@ export default function CartDrawer() {
                           border: 'none',
                           color: 'var(--text-secondary)',
                           cursor: 'pointer',
-                          padding: '4px 6px',
+                          padding: '2px 4px',
                           display: 'flex',
                           alignItems: 'center',
                         }}
                       >
-                        <Plus size={12} />
+                        <Plus size={11} />
                       </button>
                     </div>
 
@@ -209,15 +214,15 @@ export default function CartDrawer() {
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--text-muted)',
                         cursor: 'pointer',
                         padding: '4px',
                         display: 'flex',
                         alignItems: 'center',
                       }}
-                      title="Remove from cart"
+                      title="Remove piece from bag"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
@@ -232,7 +237,7 @@ export default function CartDrawer() {
             style={{
               padding: '20px 24px',
               borderTop: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-surface)',
+              backgroundColor: 'var(--bg-primary)',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
@@ -241,14 +246,14 @@ export default function CartDrawer() {
             {/* Coupon Code Input */}
             <form onSubmit={handleApplyCoupon} style={{ display: 'flex', gap: '8px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
-                <Tag size={14} color="#64748b" style={{ position: 'absolute', left: '10px', top: '12px' }} />
+                <Tag size={13} color="#8c8883" style={{ position: 'absolute', left: '10px', top: '11px' }} />
                 <input
                   type="text"
-                  placeholder="Coupon (e.g. TECH20)"
+                  placeholder="Coupon (e.g. SAVE10)"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
                   className="input"
-                  style={{ paddingLeft: '32px', paddingBlock: '8px', fontSize: '0.8125rem', textTransform: 'uppercase' }}
+                  style={{ paddingLeft: '30px', paddingBlock: '6px', fontSize: '0.75rem', textTransform: 'uppercase' }}
                 />
               </div>
               <button
@@ -264,7 +269,7 @@ export default function CartDrawer() {
               <div
                 style={{
                   fontSize: '0.75rem',
-                  color: couponMsg.success ? '#34d399' : '#f87171',
+                  color: couponMsg.success ? 'var(--success)' : 'var(--danger)',
                   fontWeight: 500,
                 }}
               >
@@ -273,34 +278,34 @@ export default function CartDrawer() {
             )}
 
             {/* Calculations */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8125rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>Subtotal</span>
                 <span>${cart.subtotal.toFixed(2)}</span>
               </div>
               {cart.couponDiscount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399' }}>
-                  <span>Coupon Discount</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success)' }}>
+                  <span>Seasonal Saving</span>
                   <span>-${cart.couponDiscount.toFixed(2)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                <span>Estimated Shipping</span>
-                <span>{cart.shippingFee === 0 ? 'FREE' : `$${cart.shippingFee.toFixed(2)}`}</span>
+                <span>Shipping</span>
+                <span>{cart.shippingFee === 0 ? 'COMPLIMENTARY' : `$${cart.shippingFee.toFixed(2)}`}</span>
               </div>
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontWeight: 700,
-                  fontSize: '1rem',
+                  fontSize: '0.9375rem',
                   color: 'var(--text-primary)',
                   paddingTop: '6px',
                   borderTop: '1px solid var(--border-subtle)',
                 }}
               >
                 <span>Estimated Total</span>
-                <span style={{ color: 'var(--brand-primary)' }}>${cart.estimatedTotal.toFixed(2)}</span>
+                <span>${cart.estimatedTotal.toFixed(2)}</span>
               </div>
             </div>
 
@@ -310,17 +315,17 @@ export default function CartDrawer() {
                 href="/cart"
                 onClick={closeDrawer}
                 className="btn btn-secondary"
-                style={{ flex: 1, fontSize: '0.875rem' }}
+                style={{ flex: 1, fontSize: '0.75rem' }}
               >
-                View Full Cart
+                View Bag
               </Link>
               <Link
                 href="/checkout"
                 onClick={closeDrawer}
                 className="btn btn-primary"
-                style={{ flex: 1, fontSize: '0.875rem' }}
+                style={{ flex: 1, fontSize: '0.75rem' }}
               >
-                Checkout <ArrowRight size={14} />
+                Checkout <ArrowRight size={13} />
               </Link>
             </div>
 
@@ -334,7 +339,7 @@ export default function CartDrawer() {
                 color: 'var(--text-muted)',
               }}
             >
-              <ShieldCheck size={12} color="#10b981" /> Safe Demo Checkout Mode Active
+              <ShieldCheck size={12} color="var(--text-primary)" /> Secure WebMCP-Validated Checkout
             </div>
           </div>
         )}

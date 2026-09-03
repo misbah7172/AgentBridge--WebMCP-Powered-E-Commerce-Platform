@@ -44,19 +44,20 @@ export default function WebMCPIndicator() {
       const properties = selectedTool.inputSchema?.properties || {};
       for (const [key, prop] of Object.entries(properties)) {
         if (prop.type === 'string') {
-          if (key === 'query') sample[key] = 'laptop';
-          else if (key === 'productId') sample[key] = 'apexpro-16-gaming-laptop-rtx-4080';
-          else if (key === 'orderId') sample[key] = 'ORD-882194';
-          else if (key === 'code') sample[key] = 'TECH20';
-          else if (key === 'sortBy') sample[key] = 'rating';
+          if (key === 'query') sample[key] = 'silk';
+          else if (key === 'gender') sample[key] = 'Women';
+          else if (key === 'color') sample[key] = 'Red';
+          else if (key === 'category') sample[key] = 'WomensTops';
+          else if (key === 'productId') sample[key] = 'crimson-silk-charmeuse-blouse';
+          else if (key === 'code') sample[key] = 'SAVE10';
           else sample[key] = 'sample';
         } else if (prop.type === 'number') {
           if (key === 'quantity') sample[key] = 1;
-          else if (key === 'minPrice') sample[key] = 500;
-          else if (key === 'maxPrice') sample[key] = 1500;
+          else if (key === 'minPrice') sample[key] = 50;
+          else if (key === 'maxPrice') sample[key] = 200;
           else sample[key] = 1;
         } else if (prop.type === 'array') {
-          sample[key] = ['apexpro-16-gaming-laptop-rtx-4080', 'ultrablade-14-stealth-laptop'];
+          sample[key] = ['crimson-silk-charmeuse-blouse', 'royal-blue-silk-button-down'];
         } else if (prop.type === 'boolean') {
           sample[key] = true;
         }
@@ -66,48 +67,49 @@ export default function WebMCPIndicator() {
     }
   }, [selectedTool]);
 
-  const handleMouseEnter = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    setIsExpanded(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (selectedTool) return; // Keep open while testing a tool
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsExpanded(false);
-    }, 300);
-  };
-
   const handleRunTool = async () => {
     if (!selectedTool) return;
     setIsExecuting(true);
     setTestResult(null);
+
+    let parsedInput = {};
     try {
-      let parsedInput = {};
-      try {
-        parsedInput = JSON.parse(testInput);
-      } catch {
-        parsedInput = {};
-      }
-      const res = await webmcpRegistry.executeTool(selectedTool.name, parsedInput);
-      setTestResult(res);
+      parsedInput = JSON.parse(testInput);
+    } catch {
+      setTestResult({ success: false, error: 'Invalid JSON input syntax' });
+      setIsExecuting(false);
+      return;
+    }
+
+    try {
+      const result = await webmcpRegistry.executeTool(selectedTool.name, parsedInput);
+      setTestResult(result);
     } catch (err: any) {
-      setTestResult({ success: false, error: err?.message || 'Execution error' });
+      setTestResult({ success: false, error: err?.message || 'Tool execution failure' });
     } finally {
       setIsExecuting(false);
     }
   };
 
-  if (tools.length === 0) return null;
+  const publicCount = tools.filter((t) => t.permission === 'PUBLIC').length;
 
-  const publicCount = tools.filter((t) => t.status === 'AVAILABLE').length;
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+      setSelectedTool(null);
+    }, 400);
+  };
 
   return (
     <div
       style={{
         position: 'fixed',
         bottom: '24px',
-        right: '24px',
+        left: '24px',
         zIndex: 900,
         fontFamily: 'var(--font-sans)',
       }}
@@ -117,40 +119,39 @@ export default function WebMCPIndicator() {
       {/* Collapsed Badge Indicator */}
       {!isExpanded && (
         <div
+          onClick={() => setIsExpanded(true)}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            backgroundColor: 'rgba(15, 23, 42, 0.92)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
-            borderRadius: 'var(--radius-full)',
-            padding: '8px 14px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5), 0 0 12px rgba(59, 130, 246, 0.2)',
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '7px 12px',
+            boxShadow: 'var(--shadow-md)',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
           }}
         >
           <div
             style={{
-              width: '8px',
-              height: '8px',
+              width: '7px',
+              height: '7px',
               borderRadius: '50%',
-              backgroundColor: user ? '#10b981' : '#3b82f6',
-              boxShadow: user ? '0 0 8px #10b981' : '0 0 8px #3b82f6',
+              backgroundColor: user ? 'var(--success)' : 'var(--text-primary)',
             }}
           />
-          <Bot size={16} color="#60a5fa" />
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f8fafc', letterSpacing: '0.02em' }}>
+          <Bot size={15} color="var(--text-primary)" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
             WebMCP
           </span>
           <span
             style={{
-              fontSize: '0.75rem',
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: '#93c5fd',
-              padding: '1px 6px',
-              borderRadius: '10px',
+              fontSize: '0.6875rem',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              padding: '1px 5px',
+              borderRadius: '2px',
               fontWeight: 600,
             }}
           >
@@ -165,15 +166,14 @@ export default function WebMCPIndicator() {
           style={{
             width: selectedTool ? '680px' : '360px',
             maxWidth: '92vw',
-            backgroundColor: 'rgba(15, 23, 42, 0.96)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.15)',
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            transition: 'width 0.25s ease',
+            transition: 'width 0.2s ease',
           }}
         >
           {/* Header */}
@@ -184,16 +184,16 @@ export default function WebMCPIndicator() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: 'rgba(30, 41, 59, 0.5)',
+              backgroundColor: 'var(--bg-primary)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bot size={18} color="#60a5fa" />
+              <Bot size={16} color="var(--text-primary)" />
               <div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   WebMCP Protocol Layer
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                   {tools.length} Tools Registered • {user ? `Active (${user.name})` : 'Guest Session'}
                 </div>
               </div>
@@ -206,14 +206,14 @@ export default function WebMCPIndicator() {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#94a3b8',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
                 padding: '4px',
                 display: 'flex',
                 alignItems: 'center',
               }}
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
 
@@ -229,7 +229,7 @@ export default function WebMCPIndicator() {
                 borderRight: selectedTool ? '1px solid var(--border-subtle)' : 'none',
               }}
             >
-              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '6px 8px' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 8px' }}>
                 Exposed Agent Tools ({tools.length})
               </div>
 
@@ -248,13 +248,13 @@ export default function WebMCPIndicator() {
                       padding: '8px 10px',
                       marginBottom: '4px',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
-                      border: isSelected ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                      backgroundColor: isSelected ? 'var(--bg-surface)' : 'transparent',
+                      border: isSelected ? '1px solid var(--border-medium)' : '1px solid transparent',
                       cursor: 'pointer',
                       transition: 'background 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
@@ -263,10 +263,10 @@ export default function WebMCPIndicator() {
                     <div style={{ overflow: 'hidden', paddingRight: '8px' }}>
                       <div
                         style={{
-                          fontSize: '0.8125rem',
+                          fontSize: '0.75rem',
                           fontFamily: 'var(--font-mono)',
                           fontWeight: 600,
-                          color: isAvailable ? '#f1f5f9' : '#94a3b8',
+                          color: isAvailable ? 'var(--text-primary)' : 'var(--text-muted)',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
@@ -277,7 +277,7 @@ export default function WebMCPIndicator() {
                       <div
                         style={{
                           fontSize: '0.6875rem',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
@@ -291,39 +291,39 @@ export default function WebMCPIndicator() {
                       {isAvailable ? (
                         <span
                           style={{
-                            fontSize: '0.6875rem',
+                            fontSize: '0.625rem',
                             fontWeight: 600,
-                            color: '#34d399',
-                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
+                            color: 'var(--success)',
+                            backgroundColor: 'var(--success-bg)',
+                            padding: '1px 5px',
+                            borderRadius: '2px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '3px',
                           }}
                         >
-                          <CheckCircle size={10} />
+                          <CheckCircle size={9} />
                           ON
                         </span>
                       ) : (
                         <span
                           style={{
-                            fontSize: '0.6875rem',
+                            fontSize: '0.625rem',
                             fontWeight: 600,
-                            color: '#94a3b8',
-                            backgroundColor: 'rgba(148, 163, 184, 0.12)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
+                            color: 'var(--text-muted)',
+                            backgroundColor: 'var(--bg-surface)',
+                            padding: '1px 5px',
+                            borderRadius: '2px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '3px',
                           }}
                         >
-                          <Lock size={10} />
-                          LOGIN
+                          <Lock size={9} />
+                          AUTH
                         </span>
                       )}
-                      <ChevronRight size={14} color="#64748b" />
+                      <ChevronRight size={13} color="var(--text-muted)" />
                     </div>
                   </div>
                 );
@@ -340,35 +340,36 @@ export default function WebMCPIndicator() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
+                  backgroundColor: 'var(--bg-primary)',
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: '0.9375rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#60a5fa' }}>
+                    <div style={{ fontSize: '0.875rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {selectedTool.name}
                     </div>
                     <span
                       style={{
                         fontSize: '0.6875rem',
                         fontWeight: 600,
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: selectedTool.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                        color: selectedTool.status === 'AVAILABLE' ? '#34d399' : '#fbbf24',
+                        padding: '2px 6px',
+                        borderRadius: '2px',
+                        backgroundColor: selectedTool.status === 'AVAILABLE' ? 'var(--success-bg)' : 'var(--warning-bg)',
+                        color: selectedTool.status === 'AVAILABLE' ? 'var(--success)' : 'var(--warning)',
                       }}
                     >
                       {selectedTool.status === 'AVAILABLE' ? 'Available' : 'Login Required'}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                     {selectedTool.description}
                   </div>
                 </div>
 
                 {/* Input Schema & Live Test */}
                 <div>
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Code size={12} /> Tool Input (JSON)
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Code size={11} /> Tool Input (JSON)
                   </div>
                   <textarea
                     value={testInput}
@@ -376,10 +377,10 @@ export default function WebMCPIndicator() {
                     style={{
                       width: '100%',
                       height: '80px',
-                      backgroundColor: '#090d16',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid var(--border-medium)',
                       borderRadius: 'var(--radius-sm)',
-                      color: '#38bdf8',
+                      color: 'var(--text-primary)',
                       fontFamily: 'var(--font-mono)',
                       fontSize: '0.75rem',
                       padding: '8px',
@@ -396,8 +397,8 @@ export default function WebMCPIndicator() {
                     className="btn btn-primary btn-sm"
                     style={{ flex: 1, gap: '6px' }}
                   >
-                    <Play size={12} />
-                    {isExecuting ? 'Executing...' : 'Invoke Tool'}
+                    <Play size={11} />
+                    {isExecuting ? 'Invoking...' : 'Invoke Tool'}
                   </button>
                   <button
                     onClick={() => setSelectedTool(null)}
@@ -410,18 +411,18 @@ export default function WebMCPIndicator() {
                 {/* Result output */}
                 {testResult && (
                   <div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Terminal size={12} /> Tool Response
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Terminal size={11} /> Tool Response
                     </div>
                     <pre
                       style={{
-                        backgroundColor: '#090d16',
-                        border: testResult.success ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+                        backgroundColor: '#ffffff',
+                        border: testResult.success ? '1px solid var(--success)' : '1px solid var(--danger)',
                         borderRadius: 'var(--radius-sm)',
                         padding: '8px',
                         fontSize: '0.6875rem',
                         fontFamily: 'var(--font-mono)',
-                        color: testResult.success ? '#86efac' : '#fca5a5',
+                        color: testResult.success ? 'var(--success)' : 'var(--danger)',
                         maxHeight: '130px',
                         overflowY: 'auto',
                         whiteSpace: 'pre-wrap',
@@ -442,19 +443,19 @@ export default function WebMCPIndicator() {
                 padding: '6px 14px',
                 borderTop: '1px solid var(--border-subtle)',
                 fontSize: '0.6875rem',
-                color: '#94a3b8',
-                backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={12} color="#38bdf8" />
-                <span>Last execution: <strong style={{ color: '#f8fafc' }}>{lastActivity.toolName}</strong> at {lastActivity.time}</span>
+                <Sparkles size={11} color="var(--text-primary)" />
+                <span>Last call: <strong style={{ color: 'var(--text-primary)' }}>{lastActivity.toolName}</strong> at {lastActivity.time}</span>
               </div>
-              <span style={{ color: lastActivity.success ? '#34d399' : '#f87171' }}>
-                {lastActivity.success ? 'SUCCESS' : 'AUTH / ERR'}
+              <span style={{ color: lastActivity.success ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
+                {lastActivity.success ? 'SUCCESS' : 'ERR'}
               </span>
             </div>
           )}

@@ -110,13 +110,13 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
-        <UserIcon size={56} color="#60a5fa" style={{ margin: '0 auto 20px' }} />
-        <h1 className="h2" style={{ color: '#f8fafc', marginBottom: '12px' }}>
-          Please Sign In to Access Your Dashboard
+      <div className="container" style={{ padding: '96px 20px', textAlign: 'center' }}>
+        <UserIcon size={44} color="var(--text-muted)" style={{ margin: '0 auto 20px' }} />
+        <h1 className="h1" style={{ fontSize: '2rem', marginBottom: '12px' }}>
+          Please Sign In to Access Your Atelier Dashboard
         </h1>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '450px', margin: '0 auto 24px', fontSize: '0.9375rem' }}>
-          View order history, track active shipments, manage your wishlist, and configure your address book.
+        <p style={{ color: 'var(--text-muted)', maxWidth: '450px', margin: '0 auto 28px', fontSize: '0.875rem', lineHeight: 1.6 }}>
+          View order history, track active shipments, manage your saved garments, and configure your address book.
         </p>
         <button onClick={() => openAuthModal('login')} className="btn btn-primary btn-lg">
           Sign In to Account
@@ -134,32 +134,29 @@ export default function AccountPage() {
     try {
       const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/cancel`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'Cancelled by customer from dashboard' }),
       });
-
       const data = await res.json();
       if (data.success) {
-        setCancelMessage({ text: data.message, success: true });
+        setCancelMessage({ text: `Order ${orderNumber} successfully cancelled.`, success: true });
         fetchOrders();
       } else {
-        setCancelMessage({ text: data.message || 'Could not cancel order', success: false });
+        setCancelMessage({ text: data.message || 'Cancellation failed.', success: false });
       }
-    } catch (err: any) {
-      setCancelMessage({ text: err?.message || 'Cancellation error', success: false });
+    } catch {
+      setCancelMessage({ text: 'An unexpected cancellation error occurred.', success: false });
     } finally {
       setCancellingOrderId(null);
     }
   };
 
   return (
-    <div className="container" style={{ padding: '36px 20px' }}>
-      {/* Header Banner */}
+    <div className="container" style={{ paddingTop: '40px', paddingBottom: '96px' }}>
+      {/* Profile Header */}
       <div
         style={{
-          backgroundColor: 'var(--bg-card)',
+          backgroundColor: '#ffffff',
           border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-sm)',
           padding: '24px 32px',
           display: 'flex',
           alignItems: 'center',
@@ -172,26 +169,26 @@ export default function AccountPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'var(--brand-gradient)',
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.5rem',
-              fontWeight: 800,
+              fontSize: '1.25rem',
+              fontWeight: 700,
               color: '#ffffff',
             }}
           >
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
+            <div style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               {user.name}
             </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              {user.email} • Account ID: <code style={{ color: '#38bdf8' }}>{user.id.slice(0, 8)}...</code>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {user.email} • Atelier ID: <code style={{ color: 'var(--text-primary)' }}>{user.id.slice(0, 8)}...</code>
             </div>
           </div>
         </div>
@@ -209,10 +206,12 @@ export default function AccountPage() {
             padding: '10px 18px',
             background: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'orders' ? '2px solid var(--brand-primary)' : '2px solid transparent',
-            color: activeTab === 'orders' ? '#f8fafc' : 'var(--text-secondary)',
+            borderBottom: activeTab === 'orders' ? '2px solid var(--text-primary)' : '2px solid transparent',
+            color: activeTab === 'orders' ? 'var(--text-primary)' : 'var(--text-muted)',
             fontWeight: 600,
-            fontSize: '0.9375rem',
+            fontSize: '0.8125rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
