@@ -45,9 +45,9 @@ export default function AuthModal() {
 
   const handleDemoLogin = async () => {
     setError(null);
-    const res = await login('demo@agentbridge.io', 'demo1234');
+    const res = await login('demo@agentbridge.io', 'password123');
     if (!res.success) {
-      setError('Could not sign in with demo credentials');
+      setError(res.message || 'Could not sign in with demo credentials');
     }
   };
 
@@ -264,7 +264,7 @@ export default function AuthModal() {
               style={{ width: '100%', gap: '6px' }}
             >
               <Zap size={13} color="var(--text-primary)" />
-              1-Click Demo Login (demo@agentbridge.io)
+              1-Click Demo Login (demo@agentbridge.io / password123)
             </button>
           </div>
         </div>
