@@ -1,115 +1,107 @@
 /* ============================================
-   Ask AI Panel — Styles
-   Uses existing CSS variables from globals.css
+   Ask AI Sidebar Drawer & Voice Interface Styles
+   Uses luxury atelier CSS variables from globals.css
    ============================================ */
 
-/* ---- Floating Trigger Button ---- */
-.askai-trigger {
+/* ---- Backdrop Overlay ---- */
+.askai-backdrop {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9998;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-full);
-  border: none;
-  cursor: pointer;
-  background: var(--brand-gradient);
-  color: white;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(6, 182, 212, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  animation: askai-pulse 3s ease-in-out infinite;
-}
-.askai-trigger:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.55), 0 0 50px rgba(6, 182, 212, 0.25);
-}
-.askai-trigger svg {
-  width: 26px;
-  height: 26px;
-}
-@keyframes askai-pulse {
-  0%, 100% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(6, 182, 212, 0.15); }
-  50% { box-shadow: 0 4px 25px rgba(59, 130, 246, 0.55), 0 0 55px rgba(6, 182, 212, 0.25); }
+  justify-content: flex-end;
+  animation: askai-fade-in 0.2s ease-out;
 }
 
-/* ---- Panel Container ---- */
-.askai-panel {
-  position: fixed;
-  bottom: 92px;
-  right: 24px;
-  z-index: 9999;
-  width: 420px;
-  max-height: 600px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-medium);
-  background: rgba(15, 20, 32, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
+@keyframes askai-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Sidebar Drawer Container ---- */
+.askai-sidebar {
+  width: 460px;
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-medium);
+  box-shadow: -15px 0 50px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
+  animation: askai-slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
   overflow: hidden;
-  animation: askai-slide-up 0.25s ease-out;
 }
-@keyframes askai-slide-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+
+@keyframes askai-slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
+
 @media (max-width: 480px) {
-  .askai-panel {
-    right: 8px;
-    left: 8px;
-    bottom: 80px;
-    width: auto;
-    max-height: 70vh;
+  .askai-sidebar {
+    width: 100vw;
   }
 }
 
-/* ---- Panel Header ---- */
+/* ---- Sidebar Header ---- */
 .askai-header {
-  padding: 16px 18px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(17, 22, 34, 0.8);
+  background: rgba(15, 20, 34, 0.95);
+  backdrop-filter: blur(10px);
 }
+
 .askai-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
+
 .askai-header-icon {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
   background: var(--brand-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  color: #090c13;
+  font-weight: 800;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
+
 .askai-header-title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
 .askai-header-subtitle {
   font-size: 11px;
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
+
 .askai-header-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
+
 .askai-header-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -118,54 +110,67 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition: all 0.15s ease;
 }
+
 .askai-header-btn:hover {
   background: var(--bg-card-hover);
   color: var(--text-primary);
 }
 
-/* ---- Settings / API Key ---- */
+.askai-header-btn--active {
+  color: var(--brand-primary);
+  background: rgba(212, 175, 55, 0.15);
+}
+
+/* ---- Settings Drawer Section ---- */
 .askai-settings {
-  padding: 12px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(21, 28, 44, 0.5);
+  background: var(--bg-card);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  animation: askai-slide-down 0.2s ease-out;
 }
+
+@keyframes askai-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .askai-settings-row {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
 }
+
 .askai-settings-row label {
   font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  min-width: 50px;
-  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
+
 .askai-settings-input {
-  flex: 1;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
   background: var(--bg-primary);
   color: var(--text-primary);
-  outline: none;
+  font-size: 13px;
   font-family: var(--font-mono);
+  outline: none;
   transition: border-color 0.15s;
 }
+
 .askai-settings-input:focus {
   border-color: var(--brand-primary);
 }
-.askai-settings-input::placeholder {
-  color: var(--text-muted);
-}
+
 .askai-settings-hint {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -174,18 +179,23 @@
 .askai-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 14px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 200px;
-  max-height: 360px;
+  gap: 16px;
+  scroll-behavior: smooth;
 }
+
 .askai-messages::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
+
+.askai-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .askai-messages::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
+  background: var(--border-medium);
   border-radius: 4px;
 }
 
@@ -194,150 +204,97 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex: 1;
-  padding: 24px;
   text-align: center;
+  padding: 40px 10px;
+  margin: auto 0;
 }
+
 .askai-empty-icon {
-  font-size: 36px;
-  opacity: 0.6;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(56, 189, 248, 0.2) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--brand-primary);
+  margin-bottom: 16px;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
 }
+
 .askai-empty-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-primary);
+  margin-bottom: 8px;
 }
+
 .askai-empty-desc {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 13px;
+  color: var(--text-secondary);
   line-height: 1.5;
+  max-width: 320px;
+  margin-bottom: 24px;
 }
+
 .askai-suggestions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 4px;
-}
-.askai-suggestion-chip {
-  padding: 5px 12px;
-  font-size: 11px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.askai-suggestion-chip:hover {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  background: rgba(59, 130, 246, 0.08);
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
 }
 
-/* ---- Message Bubbles ---- */
-.askai-msg {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 92%;
-  animation: askai-msg-in 0.2s ease-out;
-}
-@keyframes askai-msg-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.askai-msg--user {
-  align-self: flex-end;
-}
-.askai-msg--model {
-  align-self: flex-start;
-}
-.askai-msg-bubble {
+.askai-suggestion-chip {
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  font-size: 13px;
-  line-height: 1.55;
-  word-break: break-word;
-}
-.askai-msg--user .askai-msg-bubble {
-  background: var(--brand-gradient);
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-.askai-msg--model .askai-msg-bubble {
+  border: 1px solid var(--border-subtle);
   background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  border-bottom-left-radius: 4px;
-}
-
-/* ---- Tool Action Badges ---- */
-.askai-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.askai-tool-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
   color: var(--text-secondary);
-}
-.askai-tool-badge--success {
-  border-color: var(--success);
-  color: var(--success);
-  background: var(--success-bg);
-}
-.askai-tool-badge--failed {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-.askai-tool-badge--executing {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-.askai-tool-badge--awaiting {
-  border-color: var(--warning);
-  color: var(--warning);
-  background: var(--warning-bg);
-}
-.askai-tool-badge-icon {
   font-size: 12px;
-  line-height: 1;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* ---- Confirmation Card ---- */
+.askai-suggestion-chip:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: rgba(212, 175, 55, 0.4);
+  transform: translateX(4px);
+}
+
+/* ---- Confirmation Box ---- */
 .askai-confirm {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--warning);
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(245, 158, 11, 0.1);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .askai-confirm-text {
   font-size: 13px;
   color: var(--text-primary);
   line-height: 1.5;
 }
+
 .askai-confirm-actions {
   display: flex;
   gap: 8px;
 }
+
 .askai-confirm-btn {
   flex: 1;
-  padding: 7px 14px;
+  padding: 8px 14px;
   border-radius: var(--radius-sm);
   border: none;
   font-size: 12px;
@@ -345,32 +302,99 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .askai-confirm-btn--yes {
   background: var(--success);
   color: white;
 }
+
 .askai-confirm-btn--yes:hover {
   background: #0ea572;
 }
+
 .askai-confirm-btn--no {
   background: var(--bg-card);
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
 }
+
 .askai-confirm-btn--no:hover {
   background: var(--bg-card-hover);
   color: var(--text-primary);
 }
 
+/* ---- Voice Status Listening Banner ---- */
+.askai-voice-bar {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(239, 68, 68, 0.12) 100%);
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.askai-voice-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.askai-voice-waves {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+}
+
+.askai-voice-wave {
+  width: 3px;
+  background: var(--brand-primary);
+  border-radius: 2px;
+  animation: askai-wave-bounce 0.8s ease-in-out infinite alternate;
+}
+
+.askai-voice-wave:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+.askai-voice-wave:nth-child(2) { height: 16px; animation-delay: 0.3s; }
+.askai-voice-wave:nth-child(3) { height: 12px; animation-delay: 0.15s; }
+.askai-voice-wave:nth-child(4) { height: 8px; animation-delay: 0.4s; }
+
+@keyframes askai-wave-bounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.4); }
+}
+
+.askai-voice-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.askai-voice-stop-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.askai-voice-stop-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
 /* ---- Input Area ---- */
 .askai-input-area {
-  padding: 12px 14px;
+  padding: 14px 18px;
   border-top: 1px solid var(--border-subtle);
-  background: rgba(17, 22, 34, 0.8);
+  background: rgba(15, 20, 34, 0.95);
   display: flex;
   gap: 8px;
   align-items: flex-end;
 }
+
 .askai-input {
   flex: 1;
   padding: 10px 14px;
@@ -381,41 +405,80 @@
   font-size: 13px;
   outline: none;
   resize: none;
-  min-height: 40px;
-  max-height: 80px;
+  min-height: 42px;
+  max-height: 90px;
   line-height: 1.4;
   transition: border-color 0.15s;
 }
+
 .askai-input:focus {
   border-color: var(--brand-primary);
 }
+
 .askai-input::placeholder {
   color: var(--text-muted);
 }
+
+/* Microphone Button */
+.askai-mic-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.askai-mic-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.askai-mic-btn--listening {
+  background: rgba(212, 175, 55, 0.25) !important;
+  border-color: #d4af37 !important;
+  color: #d4af37 !important;
+  animation: askai-mic-pulse 1.2s infinite ease-in-out;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
+}
+
+@keyframes askai-mic-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), 0 0 30px rgba(239, 68, 68, 0.4); }
+}
+
+/* Send Button */
 .askai-send-btn {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-md);
   border: none;
   background: var(--brand-gradient);
-  color: white;
+  color: #090c13;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.15s, opacity 0.15s;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
 }
+
 .askai-send-btn:hover:not(:disabled) {
   transform: scale(1.05);
 }
+
 .askai-send-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-.askai-send-btn svg {
-  width: 18px;
-  height: 18px;
+  box-shadow: none;
 }
 
 /* ---- Typing Indicator ---- */
@@ -430,23 +493,28 @@
   border: 1px solid var(--border-subtle);
   border-bottom-left-radius: 4px;
 }
+
 .askai-typing-dots {
   display: flex;
   gap: 4px;
 }
+
 .askai-typing-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--brand-primary);
   animation: askai-dot-bounce 1.2s infinite;
 }
+
 .askai-typing-dot:nth-child(2) { animation-delay: 0.15s; }
 .askai-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
 @keyframes askai-dot-bounce {
   0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
   40% { transform: scale(1); opacity: 1; }
 }
+
 .askai-typing-text {
   font-size: 11px;
   color: var(--text-muted);

@@ -3,6 +3,7 @@ import '@/styles/globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
+import { AskAIProvider } from '@/context/AskAIContext';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AuthModal from '@/components/auth/AuthModal';
@@ -12,8 +13,8 @@ import AskAIPanel from '@/components/askai/AskAIPanel';
 import WebMCPNavigationListener from '@/components/navigation/WebMCPNavigationListener';
 
 export const metadata: Metadata = {
-  title: 'AgentBridge | WebMCP-Powered E-Commerce Platform',
-  description: 'Next-generation e-commerce platform exposing 32 WebMCP tools on document.modelContext for AI agents while delivering a sleek human shopping experience.',
+  title: 'AgentBridge Atelier | WebMCP-Powered Luxury Fashion & Apparel',
+  description: 'Next-generation luxury apparel platform exposing 34 WebMCP tools on document.modelContext for AI agents while delivering a sleek human shopping experience.',
 };
 
 export default function RootLayout({
@@ -27,16 +28,18 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <Navbar />
-                <main style={{ flex: 1 }}>{children}</main>
-                <Footer />
-              </div>
-              <AuthModal />
-              <CartDrawer />
-              <WebMCPIndicator />
-              <AskAIPanel />
-              <WebMCPNavigationListener />
+              <AskAIProvider>
+                <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                  <Navbar />
+                  <main style={{ flex: 1 }}>{children}</main>
+                  <Footer />
+                </div>
+                <AuthModal />
+                <CartDrawer />
+                <WebMCPIndicator />
+                <AskAIPanel />
+                <WebMCPNavigationListener />
+              </AskAIProvider>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

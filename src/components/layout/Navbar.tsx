@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useAskAI } from '@/context/AskAIContext';
 import {
   Search,
   ShoppingBag,
@@ -26,6 +27,7 @@ export default function Navbar() {
   const { user, openAuthModal, logout } = useAuth();
   const { cart, openDrawer } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
+  const { togglePanel: toggleAskAI } = useAskAI();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -377,6 +379,43 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+
+          {/* Ask AI Trigger Button */}
+          <button
+            onClick={toggleAskAI}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '7px 14px',
+              borderRadius: 'var(--radius-full)',
+              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(56, 189, 248, 0.15) 100%)',
+              border: '1px solid rgba(212, 175, 55, 0.45)',
+              color: '#f8fafc',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.8125rem',
+              boxShadow: '0 0 14px rgba(212, 175, 55, 0.15)',
+              transition: 'all 0.2s ease',
+            }}
+            title="Open Ask AI Shopping Assistant (Voice & Text)"
+          >
+            <Sparkles size={15} color="#d4af37" />
+            <span>Ask AI</span>
+            <span
+              style={{
+                fontSize: '0.625rem',
+                backgroundColor: '#d4af37',
+                color: '#090c13',
+                fontWeight: 800,
+                padding: '1px 5px',
+                borderRadius: '4px',
+                letterSpacing: '0.04em',
+              }}
+            >
+              VOICE
+            </span>
+          </button>
 
           {/* Cart Trigger */}
           <button
