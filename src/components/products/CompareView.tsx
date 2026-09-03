@@ -197,17 +197,17 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
         <div className="compare-empty-box">
           <div className="compare-empty-title">No products selected for comparison</div>
           <p className="compare-empty-desc">
-            Ask the AI assistant to compare products (e.g. &quot;compare top laptops&quot;), or choose from our featured comparisons below:
+            Ask the AI assistant to compare products (e.g. &quot;compare red vs blue silk blouses&quot; or &quot;compare men&apos;s pima tees&quot;), or explore our apparel comparisons below:
           </p>
           <div className="compare-suggestions-row">
-            <Link href="/compare?ids=prod-1,prod-2&view=parallel" className="compare-suggest-btn">
-              Compare Featured Laptops
+            <Link href="/products?category=womens-tops" className="compare-suggest-btn">
+              Explore Women&apos;s Tops
             </Link>
-            <Link href="/compare?ids=prod-3,prod-4&view=parallel" className="compare-suggest-btn">
-              Compare Flagship Smartphones
+            <Link href="/products?category=mens-tshirts" className="compare-suggest-btn">
+              Explore Men&apos;s Luxury Tees
             </Link>
-            <Link href="/compare?ids=prod-5,prod-6&view=parallel" className="compare-suggest-btn">
-              Compare Wireless Headphones
+            <Link href="/products?q=jeans" className="compare-suggest-btn">
+              Explore Tailored Denim
             </Link>
           </div>
         </div>

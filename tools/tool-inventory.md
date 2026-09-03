@@ -1,6 +1,6 @@
 # WebMCP Tool Inventory
 
-This document provides a machine-readable inventory of all 32 WebMCP tools registered by AgentBridge.
+This document provides a machine-readable inventory of all 34 WebMCP tools registered by AgentBridge.
 
 ---
 
@@ -135,14 +135,42 @@ This document provides a machine-readable inventory of all 32 WebMCP tools regis
 - **Underlying API**: `GET /api/products/promotions`
 
 ### `get_available_product_variants`
-- **Purpose**: Retrieve product variant options
+- **Purpose**: Retrieve product variant options (sizes, colorways, fits, fabrics)
 - **Permission**: PUBLIC
 - **Required input**: `productId` (string)
-- **Output**: Base price, specs, available color/memory/storage options
+- **Output**: Base price, specs, available sizes, colors, and fit options
 - **Errors**: PRODUCT_NOT_FOUND
 - **State requirements**: None
 - **Side effects**: None (read-only)
 - **Underlying API**: `GET /api/products/:id`
+
+---
+
+## Apparel & Fashion Tools
+
+### `filter_apparel`
+- **Purpose**: Filter the apparel catalog by clothing-specific attributes (gender, category, color, size, price)
+- **Permission**: PUBLIC
+- **Optional input**:
+  - `gender`: string enum ('Women', 'Men', 'All')
+  - `category`: string enum ('Tops', 'T-Shirts', 'Jeans', 'All')
+  - `color`: string enum ('Red', 'Blue', 'Green', 'Black', 'White', 'Indigo', 'All')
+  - `size`: string ('XS', 'S', 'M', 'L', 'XL', '26', '28', '30', '32', '34')
+  - `minPrice`: number
+  - `maxPrice`: number
+  - `inStockOnly`: boolean
+  - `limit`: integer (1–50)
+- **Output**: Matching apparel items with colors, sizes, fabric specs, prices, and stock status
+- **Failure Mode Protections**: Blocks invalid gender/color combinations (e.g. Red for Men) with structured `COLOR_NOT_AVAILABLE_FOR_DEPARTMENT` error and suggested department colors
+- **Underlying API**: `GET /api/products?gender=...&color=...&size=...`
+
+### `get_apparel_size_guide`
+- **Purpose**: Retrieve verified sizing charts, body measurements, and fit guidelines
+- **Permission**: PUBLIC
+- **Optional input**: `category` ('WomensTops', 'MensTshirts', 'WomensJeans', 'MensJeans', 'All')
+- **Output**: Comprehensive measurement matrix (bust, chest, waist, hips, inseam) and fit recommendations
+- **Failure Mode Protections**: Enables conversational agents to confirm user sizing prior to cart operations, mitigating returns
+- **Underlying API**: Local authoritative sizing registry
 
 ---
 

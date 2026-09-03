@@ -1,6 +1,6 @@
 # WebMCP Tool Contracts
 
-This document defines the behavioral contracts that govern all 32 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 67 deterministic tests.
+This document defines the behavioral contracts that govern all 34 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 76 deterministic tests.
 
 ## Contract Rules
 
@@ -20,6 +20,8 @@ This document defines the behavioral contracts that govern all 32 WebMCP tools r
 | `navigate_to_page` | Public | Destination-dependent | `page` | Browser navigated to safe internal route (`/`, `/products`, `/compare`, `/cart`, `/checkout`, `/account`) |
 | `view_product_page` | Public | — | `productId` | Browser opened directly to `/products/{productId}` |
 | `view_comparison_page` | Public | — | `productIds` | Browser opened directly to `/compare` in parallel or serial mode |
+| `filter_apparel` | Public | — | — | Filtered catalog by gender, clothing category, color, size, and price |
+| `get_apparel_size_guide` | Public | — | — | Authoritative sizing charts, body measurements, and fit guidelines |
 | `search_products` | Public | — | `query` | Matching catalog products with identifiers |
 | `get_product_details` | Public | — | `productId` | Full product specifications, pricing, stock, and reviews |
 | `filter_products` | Public | — | — | Filtered catalog products by criteria |
@@ -28,7 +30,7 @@ This document defines the behavioral contracts that govern all 32 WebMCP tools r
 | `compare_products` | Public | — | `productIds` | Side-by-side product comparison |
 | `check_product_stock` | Public | — | `productId` | Real-time stock count and availability status |
 | `get_current_promotions` | Public | — | — | Active promotions, featured products, and coupon codes |
-| `get_available_product_variants` | Public | — | `productId` | Available configuration and variant options |
+| `get_available_product_variants` | Public | — | `productId` | Available sizes, colors, and fit options |
 | `get_shipping_estimate` | Public | — | `zipCode` | Shipping options with rates and delivery estimates |
 | `add_to_cart` | Authenticated | — | `productId` | Updated cart with totals |
 | `get_cart` | Authenticated | — | — | Complete cart contents with line items and calculations |
@@ -54,6 +56,7 @@ This document defines the behavioral contracts that govern all 32 WebMCP tools r
 | `INVALID_INPUT` | Input violates the declared schema (missing field, wrong type, out of range) | No | Yes |
 | `AUTHENTICATION_REQUIRED` | A protected tool was invoked without an active session | No | Yes |
 | `CART_EMPTY` | A cart-dependent tool was invoked with no items in the cart | No | Yes |
+| `COLOR_NOT_AVAILABLE_FOR_DEPARTMENT` | Requested color is not stocked in that department (e.g. Red for Men) | No | Yes |
 | `EXECUTION_ERROR` | Network or runtime failure during tool execution | Yes | No |
 
 API-level business errors — including stock availability, coupon validation, ownership verification, and order-state restrictions — are returned in the API response payload. Callers should treat `success: false` as authoritative and avoid automatic retries unless `errorDetails.retryable` is explicitly `true`.

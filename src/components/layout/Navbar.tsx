@@ -15,6 +15,7 @@ import {
   Package,
   Layers,
   Columns,
+  Sparkles,
   ChevronDown,
   Cpu,
   ArrowRight,
@@ -101,22 +102,22 @@ export default function Navbar() {
               width: '38px',
               height: '38px',
               borderRadius: 'var(--radius-md)',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+              background: 'linear-gradient(135deg, #d4af37 0%, #c5a059 50%, #38bdf8 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
-              boxShadow: '0 0 15px rgba(59, 130, 246, 0.35)',
+              boxShadow: '0 0 15px rgba(212, 175, 55, 0.35)',
             }}
           >
-            <Cpu size={22} />
+            <Sparkles size={20} />
           </div>
           <div>
             <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
-              Agent<span style={{ color: '#60a5fa' }}>Bridge</span>
+              Agent<span style={{ color: '#d4af37' }}>Bridge</span>
             </span>
-            <span style={{ display: 'block', fontSize: '0.625rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Hardware & Systems
+            <span style={{ display: 'block', fontSize: '0.625rem', fontWeight: 700, color: '#c5a059', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              Atelier & Apparel
             </span>
           </div>
         </Link>
@@ -132,7 +133,7 @@ export default function Navbar() {
               />
               <input
                 type="text"
-                placeholder="Search RTX laptops, OLED monitors, mechanical keyboards..."
+                placeholder="Search silk blouses, pima cotton tees, tailored denim, colors..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -248,9 +249,9 @@ export default function Navbar() {
 
         {/* Navigation Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Catalog Link */}
+          {/* Women Link */}
           <Link
-            href="/products"
+            href="/products?category=womens-tops"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -261,8 +262,39 @@ export default function Navbar() {
               transition: 'color 0.15s ease',
             }}
           >
-            <Layers size={16} />
-            <span>Catalog</span>
+            <span>Women</span>
+          </Link>
+
+          {/* Men Link */}
+          <Link
+            href="/products?category=mens-tshirts"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <span>Men</span>
+          </Link>
+
+          {/* Denim Link */}
+          <Link
+            href="/products?q=jeans"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <span>Denim</span>
           </Link>
 
           {/* Compare Link */}
@@ -280,6 +312,23 @@ export default function Navbar() {
           >
             <Columns size={16} />
             <span>Compare</span>
+          </Link>
+
+          {/* Catalog Link */}
+          <Link
+            href="/products"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <Layers size={16} />
+            <span>Catalog</span>
           </Link>
 
           {/* Wishlist Link */}

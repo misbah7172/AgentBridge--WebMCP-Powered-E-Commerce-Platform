@@ -45,12 +45,18 @@ import {
   viewProductPageTool,
   viewComparisonPageTool,
 } from './tools/navigationTools';
+import {
+  filterApparelTool,
+  getApparelSizeGuideTool,
+} from './tools/apparelTools';
 
 export const webmcpTools = [
   // Auth
   loginTool, registerTool, logoutTool, getAccountInfoTool,
   // Navigation
   navigateToPageTool, viewProductPageTool, viewComparisonPageTool,
+  // Apparel & Fashion
+  filterApparelTool, getApparelSizeGuideTool,
   // Products
   searchProductsTool, getProductDetailsTool, filterProductsTool, sortProductsTool,
   getProductRecommendationsTool, compareProductsTool, checkProductStockTool,

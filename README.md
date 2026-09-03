@@ -38,7 +38,7 @@ AgentBridge is a full-stack e-commerce application that implements browser-nativ
 
 ## 1. Overview
 
-AgentBridge is a Next.js 14 storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **32 WebMCP tools** on `document.modelContext`, enabling AI agents operating within the browser to search products, compare products side-by-side or serially, manage carts, handle wishlists, navigate pages, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
+AgentBridge is a Next.js 14 storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **34 WebMCP tools** on `document.modelContext`, enabling AI agents operating within the browser to discover apparel by color/gender/size, consult verified sizing charts, compare products side-by-side or serially, manage carts, handle wishlists, navigate pages, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
 
 Human shoppers and AI agents share identical business logic, database, authentication, and authorization. No separate API surface or external adapter exists.
 
@@ -106,11 +106,12 @@ Both entry points — the React UI and the WebMCP tool layer — converge on the
 
 ## 7. Tool Inventory
 
-AgentBridge registers **32 tools** across seven categories:
+AgentBridge registers **34 tools** across eight categories:
 
 | Category | Tools | Permission |
 |----------|-------|-----------|
 | **Navigation** | `navigate_to_page`, `view_product_page`, `view_comparison_page` | Public |
+| **Apparel & Fashion** | `filter_apparel`, `get_apparel_size_guide` | Public |
 | **Authentication** | `login`, `register`, `logout`, `get_account_info` | Public / Authenticated |
 | **Product Catalog** | `search_products`, `get_product_details`, `filter_products`, `sort_products`, `get_product_recommendations`, `compare_products`, `check_product_stock`, `get_current_promotions`, `get_available_product_variants` | Public |
 | **Cart Management** | `add_to_cart`, `get_cart`, `update_cart_quantity`, `remove_from_cart`, `clear_cart`, `apply_coupon` | Authenticated |
@@ -176,7 +177,7 @@ Testing is organized in four tiers:
 
 | Tier | Scope | Runner | Count |
 |------|-------|--------|-------|
-| **Deterministic** | Registry, schemas, contracts, navigation, state journeys, failure modes | `npm test` (Vitest) | 67 tests |
+| **Deterministic** | Registry, schemas, contracts, navigation, state journeys, failure modes | `npm test` (Vitest) | 76 tests |
 | **Integration** | End-to-end service execution against database | `npm run test:webmcp:integration` | 23 tests |
 | **Browser E2E** | UI flows + `document.modelContext` verification | `npm run test:webmcp:e2e` (Playwright) | 7 specs |
 | **LLM Evaluation** | Model planning accuracy (tool selection, arguments, chains) | `npm run eval:webmcp:llm` | 16 cases |

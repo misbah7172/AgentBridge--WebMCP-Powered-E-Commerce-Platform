@@ -39,11 +39,11 @@ export default function Footer() {
                 <Cpu size={18} />
               </div>
               <span style={{ fontSize: '1.125rem', fontWeight: 800, color: '#f8fafc' }}>
-                Agent<span style={{ color: '#60a5fa' }}>Bridge</span>
+                Agent<span style={{ color: '#d4af37' }}>Bridge</span> <span style={{ fontSize: '0.8125rem', color: '#c5a059', fontWeight: 600 }}>Atelier</span>
               </span>
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
-              Next-generation e-commerce architecture designed for both human shoppers and autonomous AI agents through the Web Model Context Protocol (WebMCP).
+              Next-generation luxury fashion and formal apparel platform designed for human shoppers and autonomous AI agents via Native WebMCP.
             </p>
             <div
               style={{
@@ -52,48 +52,48 @@ export default function Footer() {
                 gap: '6px',
                 padding: '4px 10px',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.25)',
+                backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                border: '1px solid rgba(212, 175, 55, 0.25)',
                 fontSize: '0.6875rem',
-                color: '#93c5fd',
+                color: '#d4af37',
                 fontWeight: 600,
               }}
             >
-              <Bot size={12} /> WebMCP 1.0 Compliant Layer
+              <Bot size={12} /> WebMCP 1.0 Compliant Fashion Engine
             </div>
           </div>
 
           {/* Catalog Categories */}
           <div>
             <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f8fafc', marginBottom: '14px' }}>
-              Hardware Catalog
+              Fashion Collections
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              <li><Link href="/products?category=laptops">Gaming & Creator Laptops</Link></li>
-              <li><Link href="/products?category=monitors">OLED & Esports Monitors</Link></li>
-              <li><Link href="/products?category=smartphones">Flagship Smartphones</Link></li>
-              <li><Link href="/products?category=headphones">Noise-Cancelling Headphones</Link></li>
-              <li><Link href="/products?category=computer-accessories">Mechanical Keyboards & Peripherals</Link></li>
+              <li><Link href="/products?category=womens-tops">Women&apos;s Tops &amp; Blouses (Red, Blue, Green)</Link></li>
+              <li><Link href="/products?category=mens-tshirts">Men&apos;s Luxury T-Shirts (Black, White, Blue)</Link></li>
+              <li><Link href="/products?category=womens-jeans">Women&apos;s Premium Denim</Link></li>
+              <li><Link href="/products?category=mens-jeans">Men&apos;s Tailored Denim</Link></li>
+              <li><Link href="/compare">Product Comparison Suite</Link></li>
             </ul>
           </div>
 
           {/* WebMCP Agent Protocol */}
           <div>
             <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f8fafc', marginBottom: '14px' }}>
-              WebMCP Protocol Specs
+              WebMCP Agent Architecture
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
               <li style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Terminal size={14} color="#60a5fa" />
-                <span>18+ Registered Agent Tools</span>
+                <Terminal size={14} color="#d4af37" />
+                <span>34 Registered Agent Tools</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Shield size={14} color="#10b981" />
-                <span>Strict Cookie Auth Security</span>
+                <Shield size={14} color="#34d399" />
+                <span>Apparel Attribute Validation &amp; Sizing</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Zap size={14} color="#f59e0b" />
-                <span>Zero Latency Local State</span>
+                <Zap size={14} color="#fbbf24" />
+                <span>document.modelContext Native Integration</span>
               </li>
             </ul>
           </div>

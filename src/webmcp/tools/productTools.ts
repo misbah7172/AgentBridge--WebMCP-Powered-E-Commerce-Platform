@@ -14,7 +14,7 @@ export const searchProductsTool: WebMCPTool = {
     properties: {
       query: {
         type: 'string',
-        description: 'Product name, keyword, brand, or category (e.g., "RTX 3050 laptop", "wireless keyboard", "OLED monitor").',
+        description: 'Product name, keyword, color, brand, or category (e.g., "red silk blouse", "black pima cotton tee", "high-rise indigo jeans").',
       },
       limit: {
         type: 'integer',
@@ -72,11 +72,11 @@ export const filterProductsTool: WebMCPTool = {
     properties: {
       category: {
         type: 'string',
-        description: 'Category slug or name (e.g. "laptops", "headphones", "gaming", "monitors").',
+        description: 'Category slug or name (e.g. "womens-tops", "mens-tshirts", "womens-jeans", "mens-jeans").',
       },
       brand: {
         type: 'string',
-        description: 'Brand name (e.g. "ApexTech", "Vanguard", "SpectraView", "SoundAura").',
+        description: 'Brand name (e.g. "Aura Atelier", "Maison Luxe", "Vogue Minimal", "Iron & Thread", "Atelier Sartorial", "Denim Atelier").',
       },
       minPrice: {
         type: 'number',
@@ -312,16 +312,21 @@ export const getAvailableProductVariantsTool: WebMCPTool = {
     const product = data.product;
     const specs = product.specifications || {};
     
-    // Extract available variant dimensions from specifications & category
+    // Extract available variant dimensions from apparel specifications
     const variants: Record<string, any[]> = {};
-    if (specs['Color'] || specs['Finish']) {
-      variants['colors'] = [specs['Color'] || specs['Finish'], 'Midnight Black', 'Platinum Silver'];
+    if (specs['Available Sizes']) {
+      variants['sizes'] = typeof specs['Available Sizes'] === 'string'
+        ? specs['Available Sizes'].split(',').map((s: string) => s.trim())
+        : specs['Available Sizes'];
     }
-    if (specs['RAM'] || specs['Memory']) {
-      variants['memory'] = [specs['RAM'] || specs['Memory'], '32GB DDR5', '64GB DDR5'];
+    if (specs['Color']) {
+      variants['colors'] = [specs['Color']];
     }
-    if (specs['Storage'] || specs['Capacity']) {
-      variants['storage'] = [specs['Storage'] || specs['Capacity'], '1TB NVMe Gen4', '2TB NVMe Gen4'];
+    if (specs['Fit']) {
+      variants['fit'] = [specs['Fit']];
+    }
+    if (specs['Material']) {
+      variants['material'] = [specs['Material']];
     }
 
     return {
@@ -329,10 +334,11 @@ export const getAvailableProductVariantsTool: WebMCPTool = {
       productId: product.id,
       productName: product.name,
       basePrice: product.price,
+      department: specs['Department'] || 'Apparel',
       currentSpecs: specs,
       availableOptions: Object.keys(variants).length > 0 ? variants : {
-        standardOption: ['Default Edition'],
-        colorOptions: ['Graphite Black', 'Titanium Grey'],
+        sizes: ['XS', 'S', 'M', 'L', 'XL'],
+        colors: [specs['Color'] || 'Standard'],
       },
       inStock: product.stock > 0,
       stockCount: product.stock,

@@ -7,10 +7,14 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('q') || undefined;
     const category = searchParams.get('category') || undefined;
     const brand = searchParams.get('brand') || undefined;
+    const color = searchParams.get('color') || undefined;
+    const gender = searchParams.get('gender') || undefined;
+    const size = searchParams.get('size') || undefined;
+    const apparelCategory = searchParams.get('apparelCategory') || undefined;
     const minPrice = searchParams.has('minPrice') ? Number(searchParams.get('minPrice')) : undefined;
     const maxPrice = searchParams.has('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined;
     const minRating = searchParams.has('minRating') ? Number(searchParams.get('minRating')) : undefined;
-    const inStockOnly = searchParams.get('inStock') === 'true';
+    const inStockOnly = searchParams.get('inStock') === 'true' || searchParams.get('inStockOnly') === 'true';
     const isFeatured = searchParams.has('featured') ? searchParams.get('featured') === 'true' : undefined;
     const isPromoted = searchParams.has('promoted') ? searchParams.get('promoted') === 'true' : undefined;
     const sort = searchParams.get('sort') || undefined;
@@ -21,6 +25,10 @@ export async function GET(req: NextRequest) {
       query,
       category,
       brand,
+      color,
+      gender,
+      size,
+      apparelCategory,
       minPrice,
       maxPrice,
       minRating,

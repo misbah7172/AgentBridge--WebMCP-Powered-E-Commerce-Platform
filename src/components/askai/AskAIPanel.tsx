@@ -175,10 +175,10 @@ export default function AskAIPanel() {
   };
 
   const SUGGESTIONS = [
-    'Search for laptops',
-    'Show current promotions',
-    'Compare top phones',
-    'What\'s in my cart?',
+    'Show red tops for women',
+    'Find blue t-shirts for men',
+    'Compare luxury tops side-by-side',
+    'What size fits a 36-inch bust?',
   ];
 
   return (

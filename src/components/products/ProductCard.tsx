@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { Star, ShoppingBag, Heart, Check, Zap } from 'lucide-react';
+import { Star, ShoppingBag, Heart } from 'lucide-react';
 
 export interface ProductCardProps {
   product: {
@@ -19,6 +19,7 @@ export interface ProductCardProps {
     reviewCount: number;
     stock: number;
     images: string[] | string;
+    specifications?: string | Record<string, any>;
     category?: { name: string; slug: string } | string;
     isFeatured?: boolean;
     isPromoted?: boolean;
@@ -37,7 +38,15 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? JSON.parse(product.images)
     : [];
 
-  const mainImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=800&q=80';
+  const specs = typeof product.specifications === 'string'
+    ? JSON.parse(product.specifications)
+    : product.specifications || {};
+
+  const color = specs['Color'] || '';
+  const hexColor = specs['HexColor'] || '#d4af37';
+  const sizes = specs['Available Sizes'] || '';
+
+  const mainImage = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1518049362265-d5b2a6467637?w=800&q=80';
   const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
 
   const discountedPrice = product.discountPercent > 0
@@ -45,9 +54,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     : product.price;
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
       {/* Top Image Container */}
-      <div style={{ position: 'relative', width: '100%', paddingTop: '70%', backgroundColor: 'var(--bg-surface)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', paddingTop: '80%', backgroundColor: 'var(--bg-surface)', overflow: 'hidden' }}>
         <Link href={`/products/${product.slug}`} style={{ position: 'absolute', inset: 0 }}>
           <img
             src={mainImage}
@@ -56,9 +65,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transition: 'transform 0.3s ease',
+              transition: 'transform 0.35s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           />
         </Link>
@@ -72,7 +81,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
           {product.isFeatured && (
             <span className="badge badge-featured">
-              FEATURED
+              ATELIER
             </span>
           )}
         </div>
@@ -90,7 +99,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            backgroundColor: 'rgba(9, 12, 19, 0.8)',
             backdropFilter: 'blur(4px)',
             border: '1px solid rgba(255, 255, 255, 0.15)',
             display: 'flex',
@@ -110,7 +119,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Body Info */}
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--brand-accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {product.brand}
           </span>
           {categoryName && (
@@ -137,10 +146,34 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </Link>
 
+        {/* Color & Size Specs Badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+          {color && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>
+              <span
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: hexColor,
+                  border: color === 'White' ? '1px solid var(--border-medium)' : 'none',
+                  display: 'inline-block',
+                }}
+              />
+              <span>{color}</span>
+            </div>
+          )}
+          {sizes && (
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: '4px' }}>
+              Sizes: {typeof sizes === 'string' ? sizes.split(',').slice(0, 3).join(', ') + '...' : 'Multiple'}
+            </span>
+          )}
+        </div>
+
         {/* Rating */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b' }}>
-            <Star size={13} fill="#f59e0b" />
+          <div style={{ display: 'flex', alignItems: 'center', color: '#fbbf24' }}>
+            <Star size={13} fill="#fbbf24" />
             <span style={{ fontSize: '0.8125rem', fontWeight: 700, marginLeft: '3px', color: '#f8fafc' }}>
               {product.rating.toFixed(1)}
             </span>
@@ -153,7 +186,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Pricing and Action Row */}
         <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
               ${discountedPrice.toFixed(2)}
             </div>
             {product.discountPercent > 0 && (

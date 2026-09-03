@@ -4,6 +4,10 @@ export interface ProductFilterOptions {
   query?: string;
   category?: string;
   brand?: string;
+  color?: string;
+  gender?: string;
+  size?: string;
+  apparelCategory?: string;
   minPrice?: number;
   maxPrice?: number;
   minRating?: number;
@@ -20,6 +24,10 @@ export async function getProducts(options: ProductFilterOptions = {}) {
     query,
     category,
     brand,
+    color,
+    gender,
+    size,
+    apparelCategory,
     minPrice,
     maxPrice,
     minRating,
@@ -36,11 +44,12 @@ export async function getProducts(options: ProductFilterOptions = {}) {
   if (query && query.trim() !== '') {
     const q = query.trim();
     where.OR = [
-      { name: { contains: q } },
-      { description: { contains: q } },
-      { brand: { contains: q } },
-      { tags: { contains: q } },
-      { category: { name: { contains: q } } },
+      { name: { contains: q, mode: 'insensitive' } },
+      { description: { contains: q, mode: 'insensitive' } },
+      { brand: { contains: q, mode: 'insensitive' } },
+      { tags: { contains: q, mode: 'insensitive' } },
+      { specifications: { contains: q, mode: 'insensitive' } },
+      { category: { name: { contains: q, mode: 'insensitive' } } },
     ];
   }
 
@@ -51,7 +60,35 @@ export async function getProducts(options: ProductFilterOptions = {}) {
   }
 
   if (brand) {
-    where.brand = { equals: brand };
+    where.brand = { equals: brand, mode: 'insensitive' };
+  }
+
+  if (color && color !== 'All') {
+    where.OR = [
+      ...(where.OR || []),
+      { tags: { contains: color.toLowerCase(), mode: 'insensitive' } },
+      { specifications: { contains: `"Color":"${color}"`, mode: 'insensitive' } },
+    ];
+  }
+
+  if (gender && gender !== 'All') {
+    where.OR = [
+      ...(where.OR || []),
+      { tags: { contains: gender.toLowerCase(), mode: 'insensitive' } },
+      { specifications: { contains: `"Department":"${gender}"`, mode: 'insensitive' } },
+    ];
+  }
+
+  if (apparelCategory && apparelCategory !== 'All') {
+    where.OR = [
+      ...(where.OR || []),
+      { tags: { contains: apparelCategory.toLowerCase(), mode: 'insensitive' } },
+      { specifications: { contains: `"Category":"${apparelCategory}"`, mode: 'insensitive' } },
+    ];
+  }
+
+  if (size) {
+    where.specifications = { contains: size, mode: 'insensitive' };
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {

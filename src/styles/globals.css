@@ -1,26 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg-primary: #0a0d14;
-  --bg-secondary: #111622;
-  --bg-card: #151c2c;
-  --bg-card-hover: #1b2337;
-  --bg-elevated: #1f283d;
-  --bg-surface: #0e131f;
+  --bg-primary: #090c13;
+  --bg-secondary: #0f1422;
+  --bg-card: #141b2c;
+  --bg-card-hover: #1a233a;
+  --bg-elevated: #1e2842;
+  --bg-surface: #0c101a;
 
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.15);
-  --border-active: #3b82f6;
+  --border-active: #d4af37;
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --text-inverted: #0a0d14;
+  --text-inverted: #090c13;
 
-  --brand-primary: #3b82f6;
-  --brand-primary-hover: #2563eb;
-  --brand-accent: #06b6d4;
-  --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  --brand-primary: #d4af37;
+  --brand-primary-hover: #c5a059;
+  --brand-accent: #38bdf8;
+  --brand-gradient: linear-gradient(135deg, #d4af37 0%, #c5a059 40%, #38bdf8 100%);
 
   --success: #10b981;
   --success-bg: rgba(16, 185, 129, 0.12);
@@ -38,9 +38,10 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+  --shadow-glow: 0 0 25px rgba(212, 175, 55, 0.18);
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --container-max: 1280px;
