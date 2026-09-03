@@ -16,6 +16,7 @@ import {
   X,
   Radio,
   HelpCircle,
+  Square,
 } from 'lucide-react';
 import type {
   ChatMessage as ChatMessageType,
@@ -43,12 +44,16 @@ export default function AskAIPanel() {
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationRequest | null>(null);
 
-  // Voice States
+  // Voice & Speech States
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(true);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceReply, setVoiceReply] = useState(false);
   const [autoSendVoice, setAutoSendVoice] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Persistent ref to avoid stale closure issues during async turn execution
+  const voiceReplyRef = useRef(false);
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -64,7 +69,11 @@ export default function AskAIPanel() {
       if (savedModel) setModel(savedModel);
 
       const savedVoiceReply = localStorage.getItem('agentbridge_voice_reply');
-      if (savedVoiceReply) setVoiceReply(savedVoiceReply === 'true');
+      if (savedVoiceReply !== null) {
+        const val = savedVoiceReply === 'true';
+        setVoiceReply(val);
+        voiceReplyRef.current = val;
+      }
 
       // Check SpeechRecognition support
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -72,6 +81,19 @@ export default function AskAIPanel() {
         setVoiceSupported(false);
       }
     }
+  }, []);
+
+  // Synchronize ref whenever state updates
+  useEffect(() => {
+    voiceReplyRef.current = voiceReply;
+  }, [voiceReply]);
+
+  // Stop any active SpeechSynthesis immediately
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
   }, []);
 
   // Save API key to localStorage when updated
@@ -90,24 +112,58 @@ export default function AskAIPanel() {
     }
   };
 
+  // Toggle voice replies on/off and immediately silence active speech if turned off
   const handleToggleVoiceReply = () => {
     const next = !voiceReply;
     setVoiceReply(next);
+    voiceReplyRef.current = next;
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('agentbridge_voice_reply', String(next));
+      // If muting or speech is currently active, cancel speech immediately!
+      if (!next || isSpeaking) {
+        stopSpeaking();
+      }
     }
   };
+
+  // Safe Close Handler: closes drawer and silences any active speech synthesis
+  const handleClose = useCallback(() => {
+    stopSpeaking();
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+    closePanel();
+  }, [stopSpeaking, closePanel, isListening]);
+
+  // Stop speaking whenever the panel is closed or on unmount
+  useEffect(() => {
+    if (!isPanelOpen) {
+      stopSpeaking();
+    }
+  }, [isPanelOpen, stopSpeaking]);
+
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, [stopSpeaking]);
 
   // Close sidebar on Escape key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isPanelOpen) {
-        closePanel();
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isPanelOpen, closePanel]);
+  }, [isPanelOpen, handleClose]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -142,12 +198,21 @@ export default function AskAIPanel() {
     );
   }, []);
 
-  // Text-To-Speech function
+  // Text-To-Speech function with strict check on voiceReplyRef to avoid stale closures
   const speakResponse = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !voiceReply) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    // Check ref directly: if user muted or turned off voice replies, do NOT speak!
+    if (!voiceReplyRef.current) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
     try {
       window.speechSynthesis.cancel();
-      // Strip markdown syntax for natural speech
+
+      // Strip markdown syntax, URLs, brackets for natural audio playback
       const clean = text
         .replace(/\*\*(.*?)\*\*/g, '$1')
         .replace(/\*(.*?)\*/g, '$1')
@@ -155,16 +220,41 @@ export default function AskAIPanel() {
         .replace(/`{1,3}.*?`{1,3}/gs, '')
         .replace(/#+\s/g, '')
         .replace(/-{3,}/g, '')
-        .replace(/•\s/g, '');
+        .replace(/•\s/g, '')
+        .replace(/\n+/g, '. ')
+        .trim();
+
+      if (!clean) {
+        setIsSpeaking(false);
+        return;
+      }
 
       const utterance = new SpeechSynthesisUtterance(clean);
-      utterance.rate = 1.05;
+      utterance.rate = 1.0;
       utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      // Slight timeout to ensure previous cancel queue settled in browser
+      setTimeout(() => {
+        if (voiceReplyRef.current && window.speechSynthesis) {
+          window.speechSynthesis.speak(utterance);
+        } else {
+          setIsSpeaking(false);
+        }
+      }, 50);
     } catch {
-      // Ignore speech synthesis errors
+      setIsSpeaking(false);
     }
-  }, [voiceReply]);
+  }, []);
 
   const executeTurn = async (userPrompt: string) => {
     const text = userPrompt.trim();
@@ -174,6 +264,9 @@ export default function AskAIPanel() {
       setError('Please enter your Gemini API key in settings.');
       return;
     }
+
+    // Silence any ongoing speech when sending a new prompt
+    stopSpeaking();
 
     setError(null);
     setInput('');
@@ -204,8 +297,8 @@ export default function AskAIPanel() {
       };
       setMessages((prev) => [...prev, modelMsg]);
 
-      // Speak response if voice reply is enabled
-      if (response.message) {
+      // Only speak if voiceReply is still enabled
+      if (response.message && voiceReplyRef.current) {
         speakResponse(response.message);
       }
 
@@ -230,84 +323,80 @@ export default function AskAIPanel() {
     executeTurn(input);
   };
 
-  // Voice Chat Recognition
+  // Web Speech API: Voice Command Recognition
   const toggleVoiceRecording = () => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setVoiceError('Voice recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
+    if (!voiceSupported) {
+      setVoiceError('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
     if (isListening) {
-      // Stop recording
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Ignore
+        }
       }
       setIsListening(false);
       return;
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+    stopSpeaking();
+    setVoiceError(null);
 
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = '';
+
+    recognition.onstart = () => {
+      setIsListening(true);
       setVoiceError(null);
+    };
 
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        let interim = '';
-        let final = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
-          }
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
         }
+      }
+      const current = finalTranscript || interim;
+      setInput(current);
+    };
 
-        const transcript = final || interim;
-        setInput(transcript);
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        setVoiceError(`Voice error: ${event.error}`);
+      }
+    };
 
-        if (final) {
-          setIsListening(false);
-          if (autoSendVoice) {
-            setTimeout(() => {
-              executeTurn(final);
-            }, 300);
-          }
-        }
-      };
+    recognition.onend = () => {
+      setIsListening(false);
+      if (finalTranscript.trim() && autoSendVoice) {
+        executeTurn(finalTranscript);
+      }
+    };
 
-      recognition.onerror = (event: any) => {
-        if (event.error === 'not-allowed') {
-          setVoiceError('Microphone permission denied. Please allow microphone access in your browser.');
-        } else if (event.error !== 'no-speech') {
-          setVoiceError(`Voice recognition error: ${event.error}`);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
+    try {
       recognition.start();
     } catch (err: any) {
-      setVoiceError(err?.message || 'Could not start voice recognition.');
       setIsListening(false);
+      setVoiceError(err?.message || 'Could not start voice recognition');
     }
   };
 
   const handleConfirm = async (confirmation: ConfirmationRequest) => {
+    stopSpeaking();
     setPendingConfirmation(null);
     setIsLoading(true);
     setLoadingText(`Executing ${confirmation.toolName}...`);
@@ -326,7 +415,7 @@ export default function AskAIPanel() {
       };
       setMessages((prev) => [...prev, modelMsg]);
 
-      if (response.message) {
+      if (response.message && voiceReplyRef.current) {
         speakResponse(response.message);
       }
     } catch (err: any) {
@@ -337,6 +426,7 @@ export default function AskAIPanel() {
   };
 
   const handleCancelConfirmation = () => {
+    stopSpeaking();
     setPendingConfirmation(null);
     const cancelMsg: ChatMessageType = {
       id: `msg-${Date.now()}`,
@@ -348,13 +438,11 @@ export default function AskAIPanel() {
   };
 
   const handleClearChat = () => {
+    stopSpeaking();
     setMessages([]);
     setPendingConfirmation(null);
     setError(null);
     setVoiceError(null);
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -365,6 +453,7 @@ export default function AskAIPanel() {
   };
 
   const handleSuggestion = (text: string) => {
+    stopSpeaking();
     setInput(text);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -379,7 +468,7 @@ export default function AskAIPanel() {
   if (!isPanelOpen) return null;
 
   return (
-    <div className="askai-backdrop" onClick={closePanel}>
+    <div className="askai-backdrop" onClick={handleClose}>
       <div
         className="askai-sidebar"
         onClick={(e) => e.stopPropagation()}
@@ -393,7 +482,7 @@ export default function AskAIPanel() {
             <div>
               <div className="askai-header-title">
                 Ask AI Assistant
-                <span style={{ fontSize: '10px', background: 'rgba(212, 175, 55, 0.15)', color: '#d4af37', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                <span style={{ fontSize: '10px', background: 'var(--bg-surface)', color: 'var(--text-primary)', padding: '1px 6px', borderRadius: '2px', border: '1px solid var(--border-medium)' }}>
                   WebMCP
                 </span>
               </div>
@@ -402,13 +491,32 @@ export default function AskAIPanel() {
           </div>
 
           <div className="askai-header-actions">
-            {/* Voice Reply Toggle */}
+            {/* Voice Reply Mute / Unmute / Stop Button */}
             <button
-              className={`askai-header-btn ${voiceReply ? 'askai-header-btn--active' : ''}`}
-              onClick={handleToggleVoiceReply}
-              title={voiceReply ? 'Voice replies enabled (click to mute)' : 'Voice replies muted (click to enable)'}
+              className={`askai-header-btn ${isSpeaking ? 'askai-header-btn--speaking' : voiceReply ? 'askai-header-btn--active' : ''}`}
+              onClick={isSpeaking ? stopSpeaking : handleToggleVoiceReply}
+              title={
+                isSpeaking
+                  ? 'Speaking now — click to silence audio immediately'
+                  : voiceReply
+                  ? 'Voice replies ON — click to mute'
+                  : 'Voice replies MUTED — click to unmute'
+              }
+              aria-label={
+                isSpeaking
+                  ? 'Stop speaking'
+                  : voiceReply
+                  ? 'Mute voice audio'
+                  : 'Unmute voice audio'
+              }
             >
-              {voiceReply ? <Volume2 size={16} color="#d4af37" /> : <VolumeX size={16} />}
+              {isSpeaking ? (
+                <Volume2 size={16} />
+              ) : voiceReply ? (
+                <Volume2 size={16} color="var(--text-primary)" />
+              ) : (
+                <VolumeX size={16} color="var(--text-muted)" />
+              )}
             </button>
 
             {/* Settings Button */}
@@ -426,7 +534,7 @@ export default function AskAIPanel() {
             </button>
 
             {/* Close Sidebar Button */}
-            <button className="askai-header-btn" onClick={closePanel} title="Close sidebar (Esc)">
+            <button className="askai-header-btn" onClick={handleClose} title="Close sidebar (Esc)">
               <X size={18} />
             </button>
           </div>
@@ -465,22 +573,37 @@ export default function AskAIPanel() {
                 onChange={(e) => setBaseUrl(e.target.value)}
               />
             </div>
+            {/* Audio Replies Toggle in Settings */}
+            <div className="askai-settings-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
+              <label style={{ cursor: 'pointer' }} htmlFor="settings-voice-reply">
+                Read AI responses aloud (Text-to-Speech)
+              </label>
+              <input
+                id="settings-voice-reply"
+                type="checkbox"
+                checked={voiceReply}
+                onChange={handleToggleVoiceReply}
+                style={{ cursor: 'pointer', accentColor: 'var(--text-primary)' }}
+              />
+            </div>
             <div className="askai-settings-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ cursor: 'pointer' }} htmlFor="auto-send-voice">Auto-send voice commands</label>
+              <label style={{ cursor: 'pointer' }} htmlFor="auto-send-voice">
+                Auto-send voice commands
+              </label>
               <input
                 id="auto-send-voice"
                 type="checkbox"
                 checked={autoSendVoice}
                 onChange={(e) => setAutoSendVoice(e.target.checked)}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', accentColor: 'var(--text-primary)' }}
               />
             </div>
             <div className="askai-settings-hint">
               Get a free API key from{' '}
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-primary)', textDecoration: 'underline' }}>
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', fontWeight: 600, textDecoration: 'underline' }}>
                 Google AI Studio
               </a>
-              . Your key is stored locally in your browser and never sent to any intermediary server.
+              . Stored locally in your browser.
             </div>
           </div>
         )}
@@ -490,15 +613,21 @@ export default function AskAIPanel() {
           {messages.length === 0 && !isLoading ? (
             <div className="askai-empty">
               <div className="askai-empty-icon">✦</div>
-              <div className="askai-empty-title">AgentBridge Shopping AI</div>
-              <div className="askai-empty-desc">
-                Ask by voice or text. I use 34 native WebMCP tools on this page to find dresses, check size charts, compare fits, and manage your cart.
-              </div>
+              <div className="askai-empty-title">Atelier AI Stylist</div>
+              <p className="askai-empty-text">
+                Speak or type naturally. The assistant navigates our collections, sizing charts, comparisons, and cart via WebMCP.
+              </p>
+
               <div className="askai-suggestions">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} className="askai-suggestion-chip" onClick={() => handleSuggestion(s)}>
+                <div className="askai-suggestions-label">Try asking:</div>
+                {SUGGESTIONS.map((s, idx) => (
+                  <button
+                    key={idx}
+                    className="askai-suggestion-btn"
+                    onClick={() => handleSuggestion(s)}
+                  >
                     <span>{s}</span>
-                    <span style={{ color: 'var(--brand-primary)', fontSize: '14px' }}>→</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: '12px' }}>→</span>
                   </button>
                 ))}
               </div>
@@ -535,6 +664,29 @@ export default function AskAIPanel() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Voice Speaking Active Bar */}
+        {isSpeaking && (
+          <div className="askai-voice-bar" style={{ backgroundColor: 'var(--bg-surface)' }}>
+            <div className="askai-voice-indicator">
+              <Volume2 size={15} color="var(--text-primary)" />
+              <div className="askai-voice-waves">
+                <div className="askai-voice-wave" />
+                <div className="askai-voice-wave" />
+                <div className="askai-voice-wave" />
+                <div className="askai-voice-wave" />
+              </div>
+              <span className="askai-voice-text">Assistant speaking...</span>
+            </div>
+            <button
+              className="askai-voice-stop-btn"
+              onClick={stopSpeaking}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Square size={10} fill="currentColor" /> Stop Audio
+            </button>
+          </div>
+        )}
+
         {/* Voice Listening Active Bar */}
         {isListening && (
           <div className="askai-voice-bar">
@@ -561,6 +713,8 @@ export default function AskAIPanel() {
             placeholder={
               isListening
                 ? 'Listening to your speech...'
+                : isSpeaking
+                ? 'Speaking response (click Stop Audio to silence)...'
                 : apiKey
                 ? 'Ask or speak (e.g. "Show red tops for women")...'
                 : 'Enter Gemini API key in settings...'
@@ -569,31 +723,28 @@ export default function AskAIPanel() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
-            disabled={isLoading || !!pendingConfirmation}
           />
 
-          {/* Voice Microphone Command Button */}
-          {voiceSupported && (
-            <button
-              className={`askai-mic-btn ${isListening ? 'askai-mic-btn--listening' : ''}`}
-              onClick={toggleVoiceRecording}
-              disabled={isLoading || !apiKey || !!pendingConfirmation}
-              title={isListening ? 'Click to stop listening' : 'Speak command via voice'}
-              aria-label="Voice command"
-            >
-              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-            </button>
-          )}
+          {/* Microphone button */}
+          <button
+            className={`askai-voice-btn ${isListening ? 'askai-voice-btn--recording' : ''}`}
+            onClick={toggleVoiceRecording}
+            title={isListening ? 'Stop listening' : 'Start voice command'}
+            disabled={!voiceSupported || isLoading}
+            aria-label="Voice input"
+          >
+            {isListening ? <Radio size={16} /> : <Mic size={16} />}
+          </button>
 
-          {/* Send Button */}
+          {/* Send button */}
           <button
             className="askai-send-btn"
             onClick={handleSend}
-            disabled={!input.trim() || isLoading || !apiKey || !!pendingConfirmation}
-            title="Send message"
+            disabled={!input.trim() || isLoading}
+            title="Send request"
             aria-label="Send message"
           >
-            <Send size={18} />
+            <Send size={15} />
           </button>
         </div>
       </div>
