@@ -37,6 +37,11 @@ export default function WebMCPIndicator() {
     };
   }, []);
 
+  // Sync tools whenever auth user state changes
+  useEffect(() => {
+    setTools(webmcpRegistry.getRegisteredToolsInfo());
+  }, [user]);
+
   // When selected tool changes, populate sample input
   useEffect(() => {
     if (selectedTool) {
@@ -91,7 +96,9 @@ export default function WebMCPIndicator() {
     }
   };
 
-  const publicCount = tools.filter((t) => t.permission === 'PUBLIC').length;
+  const activeCount = user
+    ? tools.filter((t) => t.status !== 'LOGIN_REQUIRED').length
+    : tools.filter((t) => t.status === 'AVAILABLE' || t.permission === 'PUBLIC').length;
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -148,14 +155,15 @@ export default function WebMCPIndicator() {
           <span
             style={{
               fontSize: '0.6875rem',
-              backgroundColor: 'var(--bg-surface)',
-              color: 'var(--text-primary)',
-              padding: '1px 5px',
+              backgroundColor: user ? 'var(--success-bg, #ecfdf5)' : 'var(--bg-surface)',
+              color: user ? 'var(--success, #059669)' : 'var(--text-primary)',
+              padding: '1px 6px',
               borderRadius: '2px',
               fontWeight: 600,
+              transition: 'all 0.2s ease',
             }}
           >
-            {publicCount}/{tools.length}
+            {activeCount}/{tools.length}
           </span>
         </div>
       )}
@@ -194,7 +202,7 @@ export default function WebMCPIndicator() {
                   WebMCP Protocol Layer
                 </div>
                 <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                  {tools.length} Tools Registered • {user ? `Active (${user.name})` : 'Guest Session'}
+                  {activeCount} of {tools.length} Tools Available • {user ? `Active (${user.name})` : 'Guest Session'}
                 </div>
               </div>
             </div>
