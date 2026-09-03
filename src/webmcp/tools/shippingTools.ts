@@ -2,7 +2,11 @@ import { WebMCPTool } from '../types';
 
 export const getShippingEstimateTool: WebMCPTool = {
   name: 'get_shipping_estimate',
-  description: 'Estimate shipping costs and delivery timelines for a destination ZIP code. Returns standard, express, and overnight options with rates and estimated delivery windows.',
+  description:
+    'Estimate shipping costs and delivery timelines for a destination ZIP code. ' +
+    'Use this when the user asks about shipping costs, delivery times, or shipping options. ' +
+    'Returns standard, express, and overnight shipping options with rates and estimated delivery windows. ' +
+    'Does not require authentication.',
   category: 'Shipping',
   permission: 'PUBLIC',
   inputSchema: {
@@ -14,10 +18,12 @@ export const getShippingEstimateTool: WebMCPTool = {
       },
       weight: {
         type: 'number',
+        minimum: 0,
         description: 'Optional estimated package weight in pounds.',
       },
       items: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
         description: 'Optional number of items (used to auto-estimate weight if weight is not provided).',
       },
     },
@@ -35,7 +41,11 @@ export const getShippingEstimateTool: WebMCPTool = {
 
 export const getSavedAddressesTool: WebMCPTool = {
   name: 'get_saved_addresses',
-  description: 'Retrieve all saved shipping addresses for the authenticated user, including default address designation.',
+  description:
+    'Retrieve all saved shipping addresses for the authenticated user. ' +
+    'Use this when the user asks about their saved addresses or when preparing to place an order. ' +
+    'Returns addresses with full details and indicates which is the default address. ' +
+    'Requires authentication.',
   category: 'Account',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -50,7 +60,12 @@ export const getSavedAddressesTool: WebMCPTool = {
 
 export const updateShippingAddressTool: WebMCPTool = {
   name: 'update_shipping_address',
-  description: 'Add a new shipping address or update an existing one for the authenticated user. Can set as default address.',
+  description:
+    'Add a new shipping address or update an existing one for the authenticated user. ' +
+    'Use this when the user wants to save a new address or modify an existing saved address. ' +
+    'Omit addressId to create a new address; include it to update an existing one. ' +
+    'Returns the created or updated address. ' +
+    'Requires authentication.',
   category: 'Account',
   permission: 'AUTHENTICATED',
   inputSchema: {

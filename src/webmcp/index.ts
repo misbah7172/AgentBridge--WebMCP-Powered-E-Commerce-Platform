@@ -34,15 +34,28 @@ import {
   getSavedAddressesTool,
   updateShippingAddressTool,
 } from './tools/shippingTools';
+import {
+  loginTool,
+  registerTool,
+  logoutTool,
+  getAccountInfoTool,
+} from './tools/authTools';
 
 export const webmcpTools = [
+  // Auth
+  loginTool, registerTool, logoutTool, getAccountInfoTool,
+  // Products
   searchProductsTool, getProductDetailsTool, filterProductsTool, sortProductsTool,
   getProductRecommendationsTool, compareProductsTool, checkProductStockTool,
   getCurrentPromotionsTool, getAvailableProductVariantsTool,
+  // Cart
   addToCartTool, getCartTool, updateCartQuantityTool, removeFromCartTool,
   clearCartTool, applyCouponTool,
+  // Wishlist
   addToWishlistTool, removeFromWishlistTool, getWishlistTool,
+  // Orders
   getOrderHistoryTool, getOrderDetailsTool, cancelOrderTool, createOrderTool,
+  // Shipping & Account
   getShippingEstimateTool, getSavedAddressesTool, updateShippingAddressTool,
 ];
 

@@ -2,7 +2,11 @@ import { WebMCPTool } from '../types';
 
 export const getOrderHistoryTool: WebMCPTool = {
   name: 'get_order_history',
-  description: 'Retrieve the order history for the authenticated user with order numbers, items, status, dates, and order totals.',
+  description:
+    'Retrieve the complete order history for the authenticated user. ' +
+    'Use this when the user asks about their past orders, recent purchases, or order status. ' +
+    'Returns orders with order numbers, statuses (PENDING/PROCESSING/SHIPPED/DELIVERED/CANCELLED), item counts, totals, and dates. ' +
+    'Requires authentication. Orders are scoped to the authenticated user only.',
   category: 'Orders',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -17,7 +21,11 @@ export const getOrderHistoryTool: WebMCPTool = {
 
 export const getOrderDetailsTool: WebMCPTool = {
   name: 'get_order_details',
-  description: 'Retrieve complete details, tracking status, shipping address, and item breakdown for a specific order belonging to the authenticated user.',
+  description:
+    'Retrieve complete details for a specific order including item breakdown, shipping address, tracking status, and payment info. ' +
+    'Use this when the user asks about a particular order\'s details or tracking. ' +
+    'Returns full order details including individual items, prices, quantities, and shipping address. ' +
+    'Requires authentication. The order ID must come from get_order_history results. Only the order owner can view it.',
   category: 'Orders',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -25,7 +33,7 @@ export const getOrderDetailsTool: WebMCPTool = {
     properties: {
       orderId: {
         type: 'string',
-        description: 'Order ID or Order Number (e.g. "ORD-882194").',
+        description: 'Order ID or Order Number (e.g. "ORD-882194") obtained from get_order_history.',
       },
     },
     required: ['orderId'],
@@ -38,7 +46,12 @@ export const getOrderDetailsTool: WebMCPTool = {
 
 export const cancelOrderTool: WebMCPTool = {
   name: 'cancel_order',
-  description: 'Cancel an active, eligible order (orders currently in PENDING or PROCESSING state). Orders that are SHIPPED or DELIVERED cannot be cancelled.',
+  description:
+    'Cancel an active, eligible order. Only orders with PENDING or PROCESSING status can be cancelled. ' +
+    'Use this when the user explicitly requests to cancel a specific order. ' +
+    'Orders that are SHIPPED or DELIVERED cannot be cancelled and must follow the return process. ' +
+    'Returns the cancellation result with previous and current status. ' +
+    'Requires authentication. Only the order owner can cancel it.',
   category: 'Orders',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -46,11 +59,11 @@ export const cancelOrderTool: WebMCPTool = {
     properties: {
       orderId: {
         type: 'string',
-        description: 'Order ID or Order Number to cancel.',
+        description: 'Order ID or Order Number to cancel (obtained from get_order_history).',
       },
       reason: {
         type: 'string',
-        description: 'Optional cancellation reason.',
+        description: 'Optional cancellation reason provided by the user.',
       },
     },
     required: ['orderId'],
@@ -67,29 +80,35 @@ export const cancelOrderTool: WebMCPTool = {
 
 export const createOrderTool: WebMCPTool = {
   name: 'create_order',
-  description: 'Place an order using the items in the current cart with the specified shipping address and demo payment method.',
+  description:
+    'Place a demo order using the items currently in the cart with a specified shipping address. ' +
+    'Use this when the user has items in the cart and wants to proceed to checkout. ' +
+    'This is a demo checkout using DEMO_CARD payment only — no real payment is processed. ' +
+    'The user must explicitly confirm the order (confirmDemoOrder: true). ' +
+    'Returns the created order with order number, status, total, and items. The cart is cleared after order creation. ' +
+    'Requires authentication and a populated cart.',
   category: 'Orders',
   permission: 'TRANSACTIONAL',
   availability: 'CART_POPULATED',
   inputSchema: {
     type: 'object',
     properties: {
-      fullName: { type: 'string', description: 'Recipient full name' },
-      street: { type: 'string', description: 'Street address' },
-      city: { type: 'string', description: 'City name' },
-      state: { type: 'string', description: 'State or province' },
-      zipCode: { type: 'string', description: 'ZIP or postal code' },
-      country: { type: 'string', description: 'Country (e.g. "United States")' },
-      phone: { type: 'string', description: 'Contact phone number' },
-      couponCode: { type: 'string', description: 'Optional coupon code (e.g. TECH20)' },
+      fullName: { type: 'string', description: 'Recipient full name.' },
+      street: { type: 'string', description: 'Street address.' },
+      city: { type: 'string', description: 'City name.' },
+      state: { type: 'string', description: 'State or province.' },
+      zipCode: { type: 'string', description: 'ZIP or postal code.' },
+      country: { type: 'string', description: 'Country (default: "United States").' },
+      phone: { type: 'string', description: 'Contact phone number.' },
+      couponCode: { type: 'string', description: 'Optional coupon code (e.g. "TECH20") to apply to the order.' },
       paymentMethod: {
         type: 'string',
         enum: ['DEMO_CARD'],
-        description: 'Demo payment method (default: "DEMO_CARD")',
+        description: 'Demo payment method. Only "DEMO_CARD" is accepted.',
       },
       confirmDemoOrder: {
         type: 'boolean',
-        description: 'Must be true only after the user explicitly confirms this demo order.',
+        description: 'Must be true. Only set after the user explicitly confirms they want to place this demo order.',
       },
     },
     required: ['fullName', 'street', 'city', 'state', 'zipCode', 'confirmDemoOrder'],

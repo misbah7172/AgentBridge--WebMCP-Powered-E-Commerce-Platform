@@ -11,6 +11,10 @@
 
 | Tool | Permission / state | Required input | Primary outcome |
 | --- | --- | --- | --- |
+| `login` | Public | `email`, `password` | Authenticated user profile; protected tools exposed |
+| `register` | Public | `name`, `email`, `password` | New user profile; auto-login |
+| `logout` | Authenticated | None | Session ended; protected tools hidden |
+| `get_account_info` | Public | None | Current auth status and user profile |
 | `search_products` | Public | `query` | Matching catalog products |
 | `get_product_details` | Public | `productId` | Product, specifications, price, and stock |
 | `filter_products` | Public | None | Filtered catalog products |

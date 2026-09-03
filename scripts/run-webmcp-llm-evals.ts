@@ -1,18 +1,9 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { createProvider, type EvalCase, type PlannedCall } from './llmProviders';
 
 type ExpectedCall = { functionName?: string; arguments?: Record<string, unknown>; unordered?: { ordered?: ExpectedCall[] }[] };
-type EvalCase = {
-  id: string;
-  userPrompt: string;
-  initialState: string;
-  availableTools: string[];
-  expectedCalls: ExpectedCall[];
-  expectNoToolCall?: boolean;
-};
-type PlannedCall = { functionName?: string; arguments?: Record<string, unknown> };
 
-const model = process.env.WEBMCP_EVAL_MODEL || 'gpt-5.6-luna';
 const repetitions = Math.max(1, Number(process.env.WEBMCP_EVAL_RUNS || 3));
 
 async function filesIn(directory: string): Promise<string[]> {
@@ -35,40 +26,35 @@ function argumentScore(expected: ExpectedCall[], actual: PlannedCall[]): number 
   return checks.length ? checks.filter(Boolean).length / checks.length : 1;
 }
 
-async function planCase(evaluation: EvalCase, apiKey: string): Promise<{ calls: PlannedCall[]; latencyMs: number }> {
-  const started = performance.now();
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      store: false,
-      input: `You are evaluating tool-planning only. Do not invent IDs, product facts, or unavailable tools. Return JSON only: {"calls":[{"functionName":"...","arguments":{}}],"recovery":"..."}.\nInitial state: ${evaluation.initialState}\nAvailable tools: ${JSON.stringify(evaluation.availableTools)}\nCustomer request: ${evaluation.userPrompt}`,
-      text: { format: { type: 'json_object' } },
-    }),
-  });
-  if (!response.ok) throw new Error(`OpenAI Responses API returned ${response.status}.`);
-  const payload = await response.json() as { output_text?: string };
-  const planned = JSON.parse(payload.output_text || '{}') as { calls?: PlannedCall[] };
-  return { calls: Array.isArray(planned.calls) ? planned.calls : [], latencyMs: Number((performance.now() - started).toFixed(2)) };
-}
-
 async function main() {
   const outputDirectory = path.resolve('eval-results');
   await mkdir(outputDirectory, { recursive: true });
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    const skipped = { status: 'NOT_RUN', reason: 'OPENAI_API_KEY is not configured.', model, repetitions, measuredAt: new Date().toISOString() };
+
+  const provider = createProvider();
+  console.log(`Using provider: ${provider.name}`);
+  console.log(`Repetitions: ${repetitions}`);
+
+  if (provider.name === 'mock/deterministic') {
+    const skipped = {
+      status: 'NOT_RUN',
+      reason: 'Using mock provider. Set OPENAI_API_KEY for real LLM evaluation.',
+      provider: provider.name,
+      repetitions,
+      measuredAt: new Date().toISOString(),
+    };
     await writeFile(path.join(outputDirectory, 'llm-results.json'), `${JSON.stringify(skipped, null, 2)}\n`);
     console.log(JSON.stringify(skipped, null, 2));
     return;
   }
 
-  const cases = await Promise.all((await filesIn(path.resolve('evals'))).map(async (file) => JSON.parse(await readFile(file, 'utf8')) as EvalCase));
+  const cases = await Promise.all(
+    (await filesIn(path.resolve('evals'))).map(async (file) => JSON.parse(await readFile(file, 'utf8')) as EvalCase),
+  );
   const runs = [] as Array<{ id: string; selection: number; arguments: number; chain: number; recovery: number; latencyMs: number }>;
+
   for (let iteration = 0; iteration < repetitions; iteration++) {
     for (const evaluation of cases) {
-      const actual = await planCase(evaluation, apiKey);
+      const actual = await provider.planCase(evaluation);
       const expected = flatten(evaluation.expectedCalls);
       const names = actual.calls.map((call) => call.functionName);
       const expectedNames = expected.map((call) => call.functionName);
@@ -78,12 +64,21 @@ async function main() {
       runs.push({ id: evaluation.id, selection, arguments: argumentScore(expected, actual.calls), chain, recovery, latencyMs: actual.latencyMs });
     }
   }
-  const average = (key: keyof typeof runs[number]) => runs.reduce((total, run) => total + Number(run[key]), 0) / runs.length;
+
+  const average = (key: keyof (typeof runs)[number]) => runs.reduce((total, run) => total + Number(run[key]), 0) / runs.length;
   const report = {
-    status: 'COMPLETED', model, repetitions, cases: cases.length, measuredAt: new Date().toISOString(), runs,
+    status: 'COMPLETED',
+    provider: provider.name,
+    repetitions,
+    cases: cases.length,
+    measuredAt: new Date().toISOString(),
+    runs,
     metrics: {
-      toolSelectionAccuracy: average('selection'), argumentAccuracy: average('arguments'),
-      chainAccuracy: average('chain'), recoveryAccuracy: average('recovery'), averageLatencyMs: average('latencyMs'),
+      toolSelectionAccuracy: average('selection'),
+      argumentAccuracy: average('arguments'),
+      chainAccuracy: average('chain'),
+      recoveryAccuracy: average('recovery'),
+      averageLatencyMs: average('latencyMs'),
     },
     note: 'This provider evaluation scores generic planning only. It does not execute tools or mutate the application database.',
   };

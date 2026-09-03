@@ -312,8 +312,17 @@ function validateInput(schema: JSONSchema, input: unknown): string | null {
     const property = schema.properties[key];
     if (!property || value === undefined) continue;
     const actualType = Array.isArray(value) ? 'array' : typeof value;
-    if (actualType !== property.type) return `Invalid parameter ${key}: expected ${property.type}.`;
+    // Accept 'number' for 'integer' type (JavaScript has no integer primitive)
+    if (property.type === 'integer') {
+      if (actualType !== 'number' || !Number.isInteger(value)) return `Invalid parameter ${key}: expected integer.`;
+    } else if (actualType !== property.type) {
+      return `Invalid parameter ${key}: expected ${property.type}.`;
+    }
     if (property.enum && !property.enum.includes(value as string)) return `Invalid parameter ${key}: unsupported value.`;
+    if (typeof value === 'number') {
+      if (property.minimum !== undefined && value < property.minimum) return `Invalid parameter ${key}: must be at least ${property.minimum}.`;
+      if (property.maximum !== undefined && value > property.maximum) return `Invalid parameter ${key}: must be at most ${property.maximum}.`;
+    }
   }
   return null;
 }

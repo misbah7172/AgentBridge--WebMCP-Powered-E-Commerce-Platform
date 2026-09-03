@@ -63,6 +63,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('[WebMCP] Tool registration notice:', err);
     }
     checkCurrentUser();
+
+    // Listen for WebMCP auth tool events so the UI stays in sync
+    const handleWebMCPAuth = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.action === 'login' && detail.user) {
+        setUser(detail.user);
+        setLoading(false);
+        setIsAuthModalOpen(false);
+      } else if (detail?.action === 'logout') {
+        setUser(null);
+        setLoading(false);
+      }
+    };
+    window.addEventListener('webmcp-auth-change', handleWebMCPAuth);
+    return () => window.removeEventListener('webmcp-auth-change', handleWebMCPAuth);
   }, []);
 
   const login = async (email: string, password: string) => {

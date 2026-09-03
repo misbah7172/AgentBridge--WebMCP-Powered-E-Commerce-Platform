@@ -5,6 +5,8 @@ export interface JSONSchemaProperty {
   type: string;
   description?: string;
   enum?: string[];
+  minimum?: number;
+  maximum?: number;
   items?: {
     type: string;
     description?: string;
@@ -25,7 +27,7 @@ export interface WebMCPTool<TInput = any, TOutput = any> {
   inputSchema: JSONSchema;
   permission: ToolPermission;
   availability?: ToolAvailability;
-  category: 'Products' | 'Cart' | 'Wishlist' | 'Orders' | 'Promotions' | 'Shipping' | 'Account';
+  category: 'Products' | 'Cart' | 'Wishlist' | 'Orders' | 'Promotions' | 'Shipping' | 'Account' | 'Auth';
   execute: (input: TInput) => Promise<TOutput>;
 }
 

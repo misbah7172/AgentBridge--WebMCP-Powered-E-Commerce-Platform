@@ -2,7 +2,11 @@ import { WebMCPTool } from '../types';
 
 export const addToCartTool: WebMCPTool = {
   name: 'add_to_cart',
-  description: 'Add a product and specified quantity to the authenticated user shopping cart.',
+  description:
+    'Add a product to the authenticated user\'s shopping cart with a specified quantity. ' +
+    'Use this when the user wants to add a product they found via search_products, filter_products, or get_product_details. ' +
+    'Returns the updated cart with item count, line items, subtotal, and estimated total. ' +
+    'Requires authentication. The product ID must come from a previous catalog result.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -10,11 +14,12 @@ export const addToCartTool: WebMCPTool = {
     properties: {
       productId: {
         type: 'string',
-        description: 'ID of the product to add.',
+        description: 'ID of the product to add (obtained from a prior catalog result).',
       },
       quantity: {
-        type: 'number',
-        description: 'Quantity of items to add (default: 1, minimum: 1).',
+        type: 'integer',
+        minimum: 1,
+        description: 'Number of units to add (default: 1).',
       },
     },
     required: ['productId'],
@@ -31,7 +36,11 @@ export const addToCartTool: WebMCPTool = {
 
 export const getCartTool: WebMCPTool = {
   name: 'get_cart',
-  description: 'Retrieve all items in the authenticated user shopping cart along with item quantities, price calculations, applied discounts, shipping estimates, and order total.',
+  description:
+    'Retrieve all items in the authenticated user\'s shopping cart. ' +
+    'Use this when the user asks to view, inspect, or check their cart contents. ' +
+    'Returns line items with product details, quantities, per-item totals, subtotal, applied discounts, shipping fee, tax, and estimated order total. ' +
+    'Requires authentication.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -46,7 +55,11 @@ export const getCartTool: WebMCPTool = {
 
 export const updateCartQuantityTool: WebMCPTool = {
   name: 'update_cart_quantity',
-  description: 'Update the quantity of a specific item in the authenticated user cart.',
+  description:
+    'Update the quantity of a specific product already in the authenticated user\'s cart. ' +
+    'Use this when the user wants to change how many of a product they want. Setting quantity to 0 removes the item. ' +
+    'Returns the updated cart with recalculated totals. ' +
+    'Requires authentication. The product ID must already be in the cart.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -54,11 +67,12 @@ export const updateCartQuantityTool: WebMCPTool = {
     properties: {
       productId: {
         type: 'string',
-        description: 'Product ID in the cart to update.',
+        description: 'Product ID of the item in the cart to update.',
       },
       quantity: {
-        type: 'number',
-        description: 'New quantity desired (set to 0 to remove).',
+        type: 'integer',
+        minimum: 0,
+        description: 'New quantity desired (set to 0 to remove the item).',
       },
     },
     required: ['productId', 'quantity'],
@@ -75,7 +89,11 @@ export const updateCartQuantityTool: WebMCPTool = {
 
 export const removeFromCartTool: WebMCPTool = {
   name: 'remove_from_cart',
-  description: 'Remove a product item entirely from the authenticated user cart.',
+  description:
+    'Remove a product item entirely from the authenticated user\'s cart regardless of quantity. ' +
+    'Use this when the user explicitly wants to remove a specific item from their cart. ' +
+    'Returns the updated cart with recalculated totals. ' +
+    'Requires authentication.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -98,7 +116,11 @@ export const removeFromCartTool: WebMCPTool = {
 
 export const clearCartTool: WebMCPTool = {
   name: 'clear_cart',
-  description: 'Remove every item from the authenticated user cart. Use only when the user explicitly asks to empty the entire cart.',
+  description:
+    'Remove every item from the authenticated user\'s cart, emptying it completely. ' +
+    'Use this only when the user explicitly asks to empty or clear their entire cart. ' +
+    'Returns confirmation with an empty cart. ' +
+    'Requires authentication. This action cannot be undone.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: { type: 'object', properties: {} },
@@ -110,7 +132,12 @@ export const clearCartTool: WebMCPTool = {
 
 export const applyCouponTool: WebMCPTool = {
   name: 'apply_coupon',
-  description: 'Apply a promotional coupon code (e.g., TECH20, SAVE10, WELCOME15) to calculate discount on cart items.',
+  description:
+    'Apply a promotional coupon code to calculate a discount on the current cart items. ' +
+    'Use this when the user provides a coupon code or asks about applying a promotion. ' +
+    'Available coupon codes can be discovered via get_current_promotions. ' +
+    'Returns the recalculated cart with the coupon discount applied. ' +
+    'Requires authentication.',
   category: 'Cart',
   permission: 'AUTHENTICATED',
   inputSchema: {
@@ -118,7 +145,7 @@ export const applyCouponTool: WebMCPTool = {
     properties: {
       code: {
         type: 'string',
-        description: 'Coupon code to apply.',
+        description: 'Coupon code to apply (e.g., "TECH20", "SAVE10", "WELCOME15").',
       },
     },
     required: ['code'],

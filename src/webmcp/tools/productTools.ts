@@ -2,7 +2,11 @@ import { WebMCPTool } from '../types';
 
 export const searchProductsTool: WebMCPTool = {
   name: 'search_products',
-  description: 'Search the store product catalog by keyword, product name, brand, or category. Returns matching products with specs, pricing, rating, and stock.',
+  description:
+    'Search the store product catalog by keyword, product name, brand, or category. ' +
+    'Use this when the user asks to find, discover, or look up products. ' +
+    'Returns matching products with their IDs, names, prices, ratings, stock status, and specifications. ' +
+    'Product IDs from the results can be used with get_product_details, add_to_cart, compare_products, and other tools.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -13,7 +17,9 @@ export const searchProductsTool: WebMCPTool = {
         description: 'Product name, keyword, brand, or category (e.g., "RTX 3050 laptop", "wireless keyboard", "OLED monitor").',
       },
       limit: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 50,
         description: 'Maximum number of items to return (default: 10).',
       },
     },
@@ -28,7 +34,11 @@ export const searchProductsTool: WebMCPTool = {
 
 export const getProductDetailsTool: WebMCPTool = {
   name: 'get_product_details',
-  description: 'Retrieve full details, technical specifications, real-time stock status, pricing, discount, and reviews for a specific product by ID or slug.',
+  description:
+    'Retrieve full details for a specific product by its ID or slug. ' +
+    'Use this when the user asks for more information about a particular product found via search_products or filter_products. ' +
+    'Returns technical specifications, real-time stock status, pricing, discount percentage, customer reviews, and category. ' +
+    'The product ID must come from a previous search, filter, or recommendation result.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -36,7 +46,7 @@ export const getProductDetailsTool: WebMCPTool = {
     properties: {
       productId: {
         type: 'string',
-        description: 'Unique ID or slug of the product.',
+        description: 'Unique ID or slug of the product (obtained from a prior catalog result).',
       },
     },
     required: ['productId'],
@@ -50,7 +60,11 @@ export const getProductDetailsTool: WebMCPTool = {
 
 export const filterProductsTool: WebMCPTool = {
   name: 'filter_products',
-  description: 'Filter the catalog by category, brand, price range, minimum rating, and stock availability.',
+  description:
+    'Filter the product catalog by category, brand, price range, minimum rating, and stock availability. ' +
+    'Use this when the user wants to narrow down products by specific criteria without a search keyword. ' +
+    'Returns filtered products with their IDs, names, prices, ratings, and stock. ' +
+    'All filter parameters are optional and can be combined.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -66,14 +80,18 @@ export const filterProductsTool: WebMCPTool = {
       },
       minPrice: {
         type: 'number',
+        minimum: 0,
         description: 'Minimum price threshold in USD.',
       },
       maxPrice: {
         type: 'number',
+        minimum: 0,
         description: 'Maximum price threshold in USD.',
       },
       minRating: {
         type: 'number',
+        minimum: 1.0,
+        maximum: 5.0,
         description: 'Minimum rating threshold from 1.0 to 5.0 (e.g. 4.0 for 4+ stars).',
       },
       inStockOnly: {
@@ -81,7 +99,9 @@ export const filterProductsTool: WebMCPTool = {
         description: 'If true, only returns products currently in stock.',
       },
       limit: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 50,
         description: 'Maximum products to return (default: 12).',
       },
     },
@@ -103,7 +123,11 @@ export const filterProductsTool: WebMCPTool = {
 
 export const sortProductsTool: WebMCPTool = {
   name: 'sort_products',
-  description: 'Sort catalog products by price ascending/descending, customer rating, popularity, newest arrival, or highest discount percentage.',
+  description:
+    'Sort catalog products by a chosen criterion: price ascending/descending, customer rating, popularity, newest arrival, or highest discount. ' +
+    'Use this when the user asks to sort or order products by a specific attribute. ' +
+    'Returns sorted products with their IDs, names, prices, ratings, and stock. ' +
+    'Can be combined with an optional category filter or search keyword.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -123,7 +147,9 @@ export const sortProductsTool: WebMCPTool = {
         description: 'Optional search keyword to sort within.',
       },
       limit: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 50,
         description: 'Maximum products to return.',
       },
     },
@@ -141,7 +167,11 @@ export const sortProductsTool: WebMCPTool = {
 
 export const getProductRecommendationsTool: WebMCPTool = {
   name: 'get_product_recommendations',
-  description: 'Get tailored product recommendations based on a viewing product, category, price range, or general top sellers.',
+  description:
+    'Get tailored product recommendations based on a product being viewed, a category, or general top sellers. ' +
+    'Use this when the user wants suggestions, related items, or "you might also like" recommendations. ' +
+    'Returns recommended products with their IDs, names, prices, and ratings. ' +
+    'Pass a productId to get related products, or a category for category-based recommendations.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -156,7 +186,9 @@ export const getProductRecommendationsTool: WebMCPTool = {
         description: 'Category to recommend from.',
       },
       limit: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
+        maximum: 20,
         description: 'Number of recommendations to retrieve (default: 4).',
       },
     },
@@ -173,7 +205,11 @@ export const getProductRecommendationsTool: WebMCPTool = {
 
 export const compareProductsTool: WebMCPTool = {
   name: 'compare_products',
-  description: 'Compare 2 to 4 products side-by-side highlighting specifications, prices, discounts, ratings, and features.',
+  description:
+    'Compare 2 to 4 products side-by-side highlighting specifications, prices, discounts, ratings, and features. ' +
+    'Use this when the user wants to compare multiple products before making a purchase decision. ' +
+    'Returns a comparison table with each product\'s full details. ' +
+    'Product IDs must come from previous search, filter, or recommendation results.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -199,7 +235,11 @@ export const compareProductsTool: WebMCPTool = {
 
 export const checkProductStockTool: WebMCPTool = {
   name: 'check_product_stock',
-  description: 'Check real-time inventory quantity and in-stock status for a product by ID.',
+  description:
+    'Check real-time inventory quantity and availability status for a specific product. ' +
+    'Use this before adding a product to the cart to verify it is in stock. ' +
+    'Returns the stock count and a status of IN_STOCK, LOW_STOCK, or OUT_OF_STOCK. ' +
+    'The product ID must come from a previous catalog result.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -207,7 +247,7 @@ export const checkProductStockTool: WebMCPTool = {
     properties: {
       productId: {
         type: 'string',
-        description: 'Product ID to check stock for.',
+        description: 'Product ID to check stock for (obtained from a prior catalog result).',
       },
     },
     required: ['productId'],
@@ -229,7 +269,10 @@ export const checkProductStockTool: WebMCPTool = {
 
 export const getCurrentPromotionsTool: WebMCPTool = {
   name: 'get_current_promotions',
-  description: 'Retrieve current store promotions, featured flash deals, and active discount coupons.',
+  description:
+    'Retrieve current store promotions, featured products, flash deals, and active discount coupon codes. ' +
+    'Use this when the user asks about deals, sales, discounts, or available coupons. ' +
+    'Returns featured products, discounted products, and active coupon codes with their discount percentages.',
   category: 'Promotions',
   permission: 'PUBLIC',
   inputSchema: {
@@ -244,7 +287,11 @@ export const getCurrentPromotionsTool: WebMCPTool = {
 
 export const getAvailableProductVariantsTool: WebMCPTool = {
   name: 'get_available_product_variants',
-  description: 'Retrieve available color, configuration, storage, RAM, or sizing variants for a given product.',
+  description:
+    'Retrieve available color, configuration, storage, RAM, or sizing variants for a given product. ' +
+    'Use this when the user asks about available options or configurations for a product. ' +
+    'Returns the base price, current specifications, and available variant options. ' +
+    'Note: Variants are derived from product specifications; not all products have multiple variants.',
   category: 'Products',
   permission: 'PUBLIC',
   inputSchema: {
@@ -252,7 +299,7 @@ export const getAvailableProductVariantsTool: WebMCPTool = {
     properties: {
       productId: {
         type: 'string',
-        description: 'Product ID or slug to retrieve variant options for.',
+        description: 'Product ID or slug to retrieve variant options for (obtained from a prior catalog result).',
       },
     },
     required: ['productId'],
@@ -292,4 +339,3 @@ export const getAvailableProductVariantsTool: WebMCPTool = {
     };
   },
 };
-
