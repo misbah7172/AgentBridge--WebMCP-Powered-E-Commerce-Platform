@@ -1,58 +1,72 @@
-# WebMCP testing environment
+# WebMCP Testing Environment
 
-## Safety boundary
+This document describes the database configuration, safety boundaries, and execution procedures for the AgentBridge test infrastructure.
 
-There are two database classes:
+## Database Safety Boundary
 
-| Class | Environment variable | Allowed use |
-| --- | --- | --- |
-| Application/development | `DATABASE_URL` | Local application, manual smoke testing, deployed runtime |
-| Disposable WebMCP integration database | `TEST_DATABASE_URL` | Migration, seed/reset, and integration tests only |
+The test infrastructure distinguishes between two database classes to prevent accidental data loss:
 
-Integration commands refuse to run unless `WEBMCP_TEST_DATABASE=true`. By default they also require a distinct `TEST_DATABASE_URL`. To reuse `DATABASE_URL`, set `WEBMCP_ALLOW_SHARED_DATABASE=true`; this is an explicit acknowledgement that the integration runner will reset and seed the application database.
+| Class | Environment Variable | Permitted Use |
+|-------|---------------------|--------------|
+| Application / Development | `DATABASE_URL` | Local development, manual testing, deployed runtime |
+| Disposable Integration | `TEST_DATABASE_URL` | Migration, seed/reset, and integration test execution |
 
-The broad integration suite additionally requires `WEBMCP_RUN_INTEGRATION=true`, which the dedicated runner sets itself. As a result, ordinary `npm test` remains database-free even when shared-database permission is configured locally.
+### Safety Gates
+
+Integration commands enforce the following preconditions:
+
+1. `WEBMCP_TEST_DATABASE=true` must be set. Without this, integration commands refuse to execute.
+2. A distinct `TEST_DATABASE_URL` is required by default. To reuse `DATABASE_URL`, set `WEBMCP_ALLOW_SHARED_DATABASE=true` as an explicit acknowledgement that the integration runner will reset and reseed the database.
+3. The broad integration suite additionally requires `WEBMCP_RUN_INTEGRATION=true`, which the dedicated runner sets automatically. This ensures `npm test` remains database-free even when shared-database permission is configured locally.
 
 ## Setup
 
-1. Preferred: create a separate Neon branch/database named for WebMCP tests. Alternatively, explicitly opt into reuse of `DATABASE_URL` when the database contains only disposable demo data.
-2. Copy `.env.test.example` to a local ignored `.env.test` and populate the dedicated URL, or set the shared-database acknowledgement.
-3. Load the variables into your shell; they are not committed and must never use the production/app URL.
-4. Run `npm run db:test:verify` to prove the safety gate and connection.
-5. Run `npm run test:webmcp:integration` to apply tracked migrations, reset/seed the dedicated database, and run integration tests.
+1. **Recommended**: Create a separate Neon database branch for integration testing.
+   **Alternative**: Set `WEBMCP_ALLOW_SHARED_DATABASE=true` if the database contains only disposable demo data.
+2. Copy `.env.test.example` to `.env.test` (git-ignored) and populate the required variables.
+3. Verify the configuration: `npm run db:test:verify`.
+4. Execute integration tests: `npm run test:webmcp:integration`.
 
-The integration runner reuses the repository's existing seed rather than encoding catalog data in WebMCP tests. It destructively resets the selected database. When `WEBMCP_ALLOW_SHARED_DATABASE=true`, that selected database is the current application database.
+The integration runner applies tracked migrations, resets the target database, seeds it with standard demo data, and then executes the test suite. It destructively resets whichever database is selected.
 
-## Reproducible local checks
+## Reproducible Local Verification
 
-```text
+```bash
 npm install
-npm run eval:webmcp
-npm run db:test:verify
-npm run test:webmcp:integration
-npm run dev
+npm test                              # 57 deterministic tests (no database)
+npm run eval:webmcp                   # 16 eval case schema validation (no database)
+npm run db:test:verify                # Verify database configuration
+npm run test:webmcp:integration       # 23 integration tests (requires database)
+npm run dev                           # Start application for E2E and manual testing
+npm run test:webmcp:e2e              # 7 browser E2E specs (requires running app)
 ```
 
-`npm run eval:webmcp` is database-free. Browser verification additionally needs Chrome with `chrome://flags/#enable-webmcp-testing` enabled and the Model Context Tool Inspector.
+## Deterministic Test Coverage
 
-## Deterministic tool coverage
-
-The database-free Vitest suites cover the complete tool inventory through the exported `webmcpTools` list. They verify:
+The database-free Vitest suites validate the complete 29-tool inventory through the exported `webmcpTools` list:
 
 | Concern | Coverage |
-| --- | --- |
-| Request contract | Every tool's relative endpoint, HTTP method, encoded identifiers, and JSON request body |
-| Invalid input | Required-field and type validation occurs in the registry before execution |
+|---------|----------|
+| Request contracts | Every tool's relative endpoint, HTTP method, encoded identifiers, and JSON request body |
+| Input validation | Required fields, type checking, integer validation, enum constraints, and min/max bounds |
 | Authentication | Every protected tool is hidden from guest discovery and rejected before execution |
-| API failures | Every tool forwards the structured error payload returned by its same-origin API |
-| State changes | Cart, wishlist, order, and address tools are asserted to use explicit mutation methods and bodies |
+| API failure forwarding | Every tool correctly returns structured error payloads from upstream API responses |
+| State mutations | Cart, wishlist, order, and address tools use explicit HTTP methods and request bodies |
+| Multi-step journeys | Four journey sequences (A–D) validated through sequential tool execution |
+| Failure modes | 18 failure scenarios covering wrong order, wrong arguments, missing data, network failures, and mid-chain failures |
+| Auth tools | Request contracts, response formats, registry integration for all 4 auth tools |
 
-These tests use generic runtime identifiers and inputs; catalog fixtures remain in the normal seed and integration suite rather than in individual tool tests.
+These tests use generic runtime identifiers and inputs. Catalog-specific fixtures remain in the seed data and integration suite.
 
-## Environment record
+## Environment Record
 
-- Node: 20 (see `netlify.toml`)
-- Application: Next.js 14, React 18, Prisma 5, PostgreSQL/Neon
-- Deterministic runner: Vitest 2
-- Browser: compatible Chrome with WebMCP testing enabled
-- LLM evaluations: `npm run eval:webmcp:llm` uses the OpenAI Responses API when `OPENAI_API_KEY` is configured. It repeats every generic dataset case and records selection, argument, ordered-chain, recovery, and latency metrics in ignored `eval-results/llm-results.json`. It deliberately performs planning only and never executes tools against the database.
+| Component | Version |
+|-----------|---------|
+| Node.js | 20+ (see `netlify.toml`) |
+| Framework | Next.js 14, React 18 |
+| ORM | Prisma 5 |
+| Database | PostgreSQL (Neon) |
+| Deterministic runner | Vitest 2 |
+| Browser E2E runner | Playwright |
+| Browser | Chrome with `chrome://flags/#enable-webmcp-testing` enabled |
+| LLM evaluations | OpenAI Responses API via `npm run eval:webmcp:llm` (requires `OPENAI_API_KEY`) |

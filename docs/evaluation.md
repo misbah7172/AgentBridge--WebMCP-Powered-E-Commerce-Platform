@@ -2,49 +2,56 @@
 
 ## Overview
 
-AgentBridge evaluations measure how well AI agents can discover, select, and invoke WebMCP tools to complete e-commerce tasks. Evaluations are organized in two categories: deterministic (schema + contract validation) and probabilistic (LLM planning accuracy).
+The AgentBridge evaluation framework measures how effectively AI agents can discover, select, and invoke WebMCP tools to complete e-commerce tasks. Evaluations are organized into two categories: deterministic validation (schema compliance and contract verification) and probabilistic assessment (LLM planning accuracy).
 
 ## Deterministic Evaluations
 
-### Schema Validation (`npm run eval:webmcp`)
+### Schema Validation
 
-Validates that all evaluation case JSON files conform to the expected structure:
-- Each case has `id`, `userPrompt`, `initialState`, `availableTools`, and `expectedCalls`
-- Tool names in `availableTools` and `expectedCalls` are valid registered tools
-- Expected call arguments use runtime placeholders (`${...}`) rather than hardcoded values
+**Command:** `npm run eval:webmcp`
 
-**Result**: Pass/fail per case. All 16 cases must pass.
+Validates that all 16 evaluation case JSON files conform to the required structure:
 
-### Tool Contract Tests (`npm test`)
+- Each case declares `id`, `userPrompt`, `initialState`, `availableTools`, and `expectedCalls`
+- Tool names referenced in `availableTools` and `expectedCalls` correspond to registered tools
+- Expected call arguments use runtime placeholders (`${...}`) rather than hardcoded catalog values
 
-Validates that every tool:
+**Pass criterion:** All 16 cases must validate successfully.
+
+### Tool Contract Tests
+
+**Command:** `npm test`
+
+Validates that every tool adheres to its declared contract:
+
 - Calls the correct API endpoint with the correct HTTP method
-- Encodes query parameters properly
-- Sends correct request bodies
-- Returns structured responses
-- Handles API failures gracefully
+- Encodes query parameters and request bodies correctly
+- Returns structured responses preserving the API's payload
+- Handles failures with appropriate error codes and retry semantics
 
-**Result**: 57 deterministic tests must pass.
+**Pass criterion:** All 57 deterministic tests must pass.
 
 ## Probabilistic Evaluations
 
-### LLM Tool Planning (`npm run eval:webmcp:llm`)
+### LLM Tool Planning
 
-Sends each evaluation case to an LLM provider and measures planning accuracy. The LLM receives the user prompt, available tools, and initial state, and returns a planned sequence of tool calls.
+**Command:** `npm run eval:webmcp:llm`
 
-#### Metrics
+Each evaluation case is sent to an LLM provider. The model receives the user prompt, the list of available tools, and the initial application state, and returns a planned sequence of tool calls. The framework scores the plan against the expected calls without executing any tools.
+
+### Metrics
 
 | Metric | Definition |
 |--------|-----------|
-| **Tool Selection Accuracy** | Did the model select the correct set of tools (order-independent)? |
-| **Argument Accuracy** | Did the model provide correct arguments for each tool call? |
-| **Chain Accuracy** | Did the model produce the correct sequence of calls (order-dependent)? |
-| **Recovery Accuracy** | Did the model correctly avoid calling unavailable tools? |
+| **Tool Selection Accuracy** | Proportion of cases where the model selected the correct set of tools (order-independent) |
+| **Argument Accuracy** | Proportion of expected arguments correctly provided across all calls |
+| **Chain Accuracy** | Proportion of cases where the model produced the correct sequence of calls (order-dependent) |
+| **Recovery Accuracy** | Proportion of cases where the model correctly avoided invoking unavailable tools |
 | **Average Latency** | Mean response time per evaluation case |
 
-#### Provider Abstraction
+### Provider Abstraction
 
-The evaluation framework supports multiple LLM providers via the `LLMProvider` interface:
+The framework supports multiple LLM providers through the `LLMProvider` interface defined in `scripts/llmProviders.ts`:
 
 ```typescript
 interface LLMProvider {
@@ -53,36 +60,35 @@ interface LLMProvider {
 }
 ```
 
-Supported providers:
-- **OpenAI** (`OPENAI_API_KEY` required) — uses the Responses API
-- **Mock** (default when no API key) — deterministic responses for testing the evaluator
+| Provider | Activation | Purpose |
+|----------|-----------|---------|
+| `OpenAIProvider` | `OPENAI_API_KEY` present or `WEBMCP_EVAL_PROVIDER=openai` | Production evaluation via OpenAI Responses API |
+| `MockProvider` | No API key or `WEBMCP_EVAL_PROVIDER=mock` | Deterministic responses for CI and evaluator testing |
 
-Provider selection: Set `WEBMCP_EVAL_PROVIDER` to `openai` or `mock`, or let it auto-detect based on `OPENAI_API_KEY` presence.
-
-#### Configuration
+### Configuration
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for LLM evaluation | — |
-| `WEBMCP_EVAL_MODEL` | Model identifier | `gpt-5.6-luna` |
-| `WEBMCP_EVAL_RUNS` | Repetitions per case (for variance reduction) | 3 |
-| `WEBMCP_EVAL_PROVIDER` | Provider type override | auto-detect |
+| `OPENAI_API_KEY` | API key for the OpenAI provider | — |
+| `WEBMCP_EVAL_MODEL` | Model identifier for evaluation | `gpt-5.6-luna` |
+| `WEBMCP_EVAL_RUNS` | Repetitions per case for variance reduction | `3` |
+| `WEBMCP_EVAL_PROVIDER` | Explicit provider selection override | Auto-detect |
 
 ## Evaluation Cases
 
-### Categories
+### Category Distribution
 
 | Category | Cases | Purpose |
 |----------|-------|---------|
-| `direct/` | 1 | Single-tool invocations |
-| `tool_selection/` | 1 | Correct tool identification |
-| `arguments/` | 2 | Correct parameter generation |
-| `e2e/` | 5 | Multi-step journey completion |
-| `ordered_chains/` | 1 | Correct execution ordering |
+| `direct/` | 1 | Single-tool invocation |
+| `tool_selection/` | 1 | Correct tool identification for a given intent |
+| `arguments/` | 2 | Correct parameter generation and identifier handling |
+| `e2e/` | 5 | Multi-step journey completion (Journeys A–D) |
+| `ordered_chains/` | 1 | Correct execution ordering within a chain |
 | `unordered_chains/` | 1 | Parallel-safe tool selection |
-| `mid_chain/` | 1 | Mid-journey failure handling |
-| `failure_modes/` | 3 | Edge case and error recovery |
-| `ambiguous/` | 1 | Ambiguous user intent handling |
+| `mid_chain/` | 1 | Mid-journey failure handling and recovery |
+| `failure_modes/` | 3 | Edge case handling and constraint enforcement |
+| `ambiguous/` | 1 | Ambiguous user intent resolution |
 
 ### Case Structure
 
@@ -93,7 +99,10 @@ Provider selection: Set `WEBMCP_EVAL_PROVIDER` to `openai` or `mock`, or let it 
   "initialState": "Description of starting conditions",
   "availableTools": ["tool_name_1", "tool_name_2"],
   "expectedCalls": [
-    { "functionName": "tool_name", "arguments": { "key": "${placeholder}" } }
+    {
+      "functionName": "tool_name",
+      "arguments": { "key": "${placeholder}" }
+    }
   ],
   "expectNoToolCall": false
 }
@@ -102,31 +111,24 @@ Provider selection: Set `WEBMCP_EVAL_PROVIDER` to `openai` or `mock`, or let it 
 ### Runtime Placeholders
 
 Evaluation cases use `${...}` placeholders for values that depend on runtime data:
-- `${criteria}` — search terms
-- `${resolvedProductId}` — product ID from a prior search result
-- `${cartItemProductId}` — product ID from cart contents
-- `${userEmail}`, `${userPassword}` — credentials
-- `${fullName}`, `${street}`, `${city}`, `${state}`, `${zipCode}` — address fields
 
-Cases must never contain production SKUs, prices, brands, or categories.
+| Placeholder | Represents |
+|------------|-----------|
+| `${criteria}` | Search terms derived from user intent |
+| `${resolvedProductId}` | Product ID obtained from a prior search result |
+| `${cartItemProductId}` | Product ID currently in the cart |
+| `${userEmail}`, `${userPassword}` | User credentials |
+| `${fullName}`, `${street}`, `${city}`, `${state}`, `${zipCode}` | Shipping address fields |
 
-## Running Evaluations
+Cases must never contain production SKUs, prices, brand names, or category identifiers.
 
-```bash
-# Schema validation only
-npm run eval:webmcp
+## Output
 
-# Full evaluation with LLM provider
-OPENAI_API_KEY=sk-... npm run eval:webmcp:llm
+Evaluation results are written to `eval-results/` (git-ignored):
 
-# With custom model and repetitions
-WEBMCP_EVAL_MODEL=gpt-4o WEBMCP_EVAL_RUNS=5 npm run eval:webmcp:llm
-```
-
-## Results
-
-Results are written to `eval-results/`:
-- `summary.json` — schema validation results
-- `llm-results.json` — LLM planning metrics
-- `detailed-results.json` — combined deterministic + evaluation report
-- `report.md` — human-readable summary
+| File | Contents |
+|------|----------|
+| `summary.json` | Schema validation results |
+| `llm-results.json` | LLM planning metrics and per-case scores |
+| `detailed-results.json` | Combined deterministic and evaluation report |
+| `report.md` | Human-readable summary |

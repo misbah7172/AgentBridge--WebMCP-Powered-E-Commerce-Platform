@@ -2,120 +2,84 @@
 
 ## Overview
 
-AgentBridge testing validates that WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, and produce structured error responses. Testing is organized in four tiers.
+AgentBridge testing validates that all 29 WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, produce structured error responses, and complete multi-step agent journeys. The test infrastructure is organized in four tiers, progressing from fast deterministic validation to provider-backed evaluation.
 
 ## Tier 1: Deterministic Tool Tests
 
-**Location**: `tests/webmcp/tools/`
-**Runner**: `npm test` (Vitest)
+**Location:** `tests/webmcp/tools/`
+**Runner:** `npm test` (Vitest)
+**Count:** 57 tests across 7 files
 
-### Registry Tests (`registry.test.ts`)
-- Unknown tool returns structured TOOL_NOT_FOUND error
-- Required parameters validated before execution
-- Type checking enforced (string, number, integer, boolean, array)
-- Protected tools blocked without authentication
-- Direct execution trace records input, output, timing, state
-- All 29 tools registered with correct status per auth/cart state
-- Required field validation for every tool with required params
-- Cart-populated `create_order` gating
+### Test Files
 
-### Request Contract Tests (`requestContracts.test.ts`)
-- Verifies every tool calls the correct API endpoint with correct method
-- Validates query parameters are properly encoded
-- Validates POST/PUT/DELETE bodies contain correct fields
-- Tests all 29 tools against mock fetch
+| File | Tests | Scope |
+|------|-------|-------|
+| `registry.test.ts` | 7 | Unknown tool errors, required parameter validation, type checking, auth barriers, direct execution tracing, 29-tool registration and state gating, checkout policy |
+| `requestContracts.test.ts` | 8 | Every tool's API endpoint, HTTP method, query parameter encoding, and request body validation |
+| `authTools.test.ts` | 12 | Auth tool request contracts (4), response format validation (4), registry integration and validation (4) |
+| `stateJourneys.test.ts` | 5 | Journey A (search→inspect→add→view), Journey B (search→compare→add→update→view), Journey C (auth barrier→login→retry), Journey D (search→add→verify→checkout), full state transition cycle |
+| `failureModes.test.ts` | 18 | Wrong execution order (2), wrong arguments including negative/zero/non-integer quantities (6), missing required data (4), unknown tool (1), network failures (2), mid-chain failures (3) |
+| `checkoutPolicy.test.ts` | 3 | Demo payment method validation, order confirmation requirement |
+| `testDatabase.test.ts` | 4 | Database configuration safety gate validation |
 
-### Auth Tool Tests (`authTools.test.ts`)
-- Login, register, logout, get_account_info request contracts
-- Response format validation
-- Registry integration (validation, auth barriers)
+### What These Tests Validate
 
-### State Journey Tests (`stateJourneys.test.ts`)
-- Journey A: search → inspect → add to cart → view cart
-- Journey B: search → compare → add → update quantity → view cart
-- Journey C: auth barrier → login → retry protected operation
-- Journey D: search → add → verify cart → create demo order
-- Full state transition cycle: guest → login → add → checkout → logout
-
-### Failure Mode Tests (`failureModes.test.ts`)
-- Wrong execution order (checkout before cart)
-- Protected tool before login
-- Negative/zero/non-integer quantities
-- Invalid enum values
-- Non-object and array inputs
-- Missing required parameters
-- Unknown tool names
-- Network/runtime failures (EXECUTION_ERROR)
-- Mid-chain failures (API business errors)
-
-### Checkout Policy Tests (`checkoutPolicy.test.ts`)
-- Demo payment method validation
-- Order confirmation requirement
+- All 29 tools call the correct API endpoint with the correct HTTP method
+- Query parameters are properly URL-encoded
+- POST/PUT/DELETE request bodies contain the expected fields
+- Required parameter validation rejects missing fields with descriptive error messages
+- Type validation enforces `string`, `number`, `integer`, `boolean`, and `array` types
+- Integer validation uses `Number.isInteger()` and enforces `minimum`/`maximum` constraints
+- Enum validation rejects undeclared values
+- Protected tools are blocked without authentication
+- `create_order` is blocked when the cart is empty
+- API failure responses are forwarded to the caller without transformation
+- Network failures produce structured `EXECUTION_ERROR` responses with `retryable: true`
 
 ## Tier 2: Integration Tests
 
-**Location**: `tests/webmcp/`
-**Runner**: `npm run test:webmcp:integration`
+**Location:** `tests/webmcp/`
+**Runner:** `npm run test:webmcp:integration`
+**Count:** 23 tests
 
-Integration tests exercise tools against a real (or isolated test) database to validate end-to-end behavior including stock checks, coupon validation, and order creation.
+Integration tests exercise tools against a real (or isolated test) database, validating end-to-end behavior including stock availability checks, coupon validation, cart price calculations, order creation, and ownership-based authorization.
 
-See [testing environment](webmcp-testing-environment.md) for database setup.
+See [webmcp-testing-environment.md](webmcp-testing-environment.md) for database configuration and safety gate setup.
 
 ## Tier 3: Browser E2E Tests
 
-**Location**: `tests/browser/`
-**Runner**: `npm run test:webmcp:e2e` (Playwright)
+**Location:** `tests/browser/`
+**Runner:** `npm run test:webmcp:e2e` (Playwright)
+**Count:** 7 specs across 2 files
 
 ### Commerce Journey (`webmcp-commerce.e2e.spec.ts`)
-- Search → product detail → add to cart → verify → remove → verify empty
+- Resolves a product from live search results at runtime
+- Opens product detail page, adds to cart via UI, verifies cart state
+- Removes from cart via UI, verifies empty cart state
 
-### WebMCP Tool Discovery (`webmcp-tools.e2e.spec.ts`)
-- `document.modelContext` availability
-- Tool discovery via `getTools()`
-- Direct tool execution via `executeTool()`
-- Auth barrier enforcement in browser
-- Input validation in browser
-- Unknown tool error handling
-- State-aware tool availability changes on login/logout
+### WebMCP Tool Verification (`webmcp-tools.e2e.spec.ts`)
+- Validates `document.modelContext` availability and API surface
+- Tests tool discovery via `getTools()`
+- Tests direct tool execution via `executeTool()`
+- Verifies authentication barrier enforcement in browser context
+- Verifies input schema validation in browser context
+- Verifies structured error for unknown tool names
+- Tests state-aware tool availability changes on login/logout
 
 ## Tier 4: LLM Evaluation
 
-**Location**: `evals/`
-**Runner**: `npm run eval:webmcp:llm`
+**Location:** `evals/`
+**Runner:** `npm run eval:webmcp:llm`
+**Count:** 16 evaluation cases
 
-Measures model planning accuracy without executing tools:
-- **Tool selection accuracy** — correct tools chosen
-- **Argument accuracy** — correct parameters provided
-- **Chain accuracy** — correct execution order
-- **Recovery accuracy** — graceful handling of edge cases
-- **Latency** — response time
+Measures AI agent planning accuracy across tool selection, argument generation, execution ordering, and failure recovery — without executing tools or modifying application state. See [evaluation.md](evaluation.md) for methodology.
 
-See [evaluation](evaluation.md) for methodology.
-
-## Running Tests
+## Execution Summary
 
 ```bash
-# All deterministic tests
-npm test
-
-# Integration tests (requires database)
-npm run test:webmcp:integration
-
-# Browser E2E tests (requires running app)
-npm run test:webmcp:e2e
-
-# Evaluation dataset schema validation
-npm run eval:webmcp
-
-# LLM evaluation (requires API key)
-npm run eval:webmcp:llm
+npm test                              # Tier 1: 57 deterministic tests
+npm run test:webmcp:integration       # Tier 2: 23 integration tests
+npm run test:webmcp:e2e              # Tier 3: 7 browser E2E specs
+npm run eval:webmcp                   # Schema validation (16 cases)
+npm run eval:webmcp:llm              # Tier 4: LLM planning evaluation
 ```
-
-## Test Counts
-
-| Suite | Tests |
-|-------|-------|
-| Deterministic (Vitest) | 57 |
-| Integration | 23 |
-| Browser E2E | 7 |
-| Eval dataset cases | 16 |

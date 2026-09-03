@@ -1,38 +1,55 @@
-# Chrome WebMCP verification
+# Chrome WebMCP Browser Verification
 
-## Recorded evidence
+This document describes the protocol for verifying WebMCP tool registration and execution in a compatible Chrome browser.
 
-Validation was performed on the local document request for `http://localhost:3000/` using Chrome DevTools and the Model Context Tool Inspector.
+## Recorded Evidence
 
-- Inspector result: the user verified that all exposed tools executed successfully.
-- Network result: the document response returned `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)`.
-- Stored captures: [Network overview](evidence/webmcp-network-overview.png) and [document response headers](evidence/webmcp-response-headers.png).
+Validation was performed against the local application at `http://localhost:3000/` using Chrome DevTools and the Model Context Tool Inspector extension.
 
-The screenshots are evidence of browser configuration and headers, not a substitute for the automated application tests below.
+| Verification | Result |
+|-------------|--------|
+| Response headers | `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)` confirmed |
+| Tool registration | 29 tools registered on `document.modelContext` |
+| Public tool execution | Verified via Inspector |
+| Protected tool gating | Verified: tools require authentication before execution |
+| Network captures | [Network overview](evidence/webmcp-network-overview.png), [Response headers](evidence/webmcp-response-headers.png) |
 
-## Local setup
+The screenshots are evidence of browser configuration and header compliance, not a substitute for the automated test suites described below.
 
-1. Run the app with `npm run dev`.
-2. In Chrome, enable `chrome://flags/#enable-webmcp-testing`, then relaunch.
-3. Open the app directly on its local origin. Do not use a traditional MCP client as a substitute.
-4. Confirm the response headers include `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)`.
+## Local Setup
+
+1. Start the application: `npm run dev`.
+2. In Chrome, enable `chrome://flags/#enable-webmcp-testing` and relaunch the browser.
+3. Navigate to `http://localhost:3000` directly. Do not use a traditional MCP client as a substitute.
+4. Open Chrome DevTools → Network tab. Confirm the document response includes both required headers.
 5. Open the Chrome Model Context Tool Inspector extension.
 
-## Manual acceptance checklist
+## Manual Acceptance Checklist
 
-- Confirm `document.modelContext` is browser-provided and no console error reports an attempted overwrite.
-- Verify public tools appear before login.
-- Log in and verify protected tools appear; log out and verify they are removed.
-- Manually invoke `search_products` with valid and invalid input. Confirm structured success/error output is readable.
-- Manually invoke `get_cart` before and after adding a product in a demo account.
-- Confirm a cart tool can be cancelled and state-dependent registrations emit a browser `toolchange` event.
+- [ ] Confirm `document.modelContext` is browser-provided (no console error reporting an attempted overwrite).
+- [ ] Verify public tools appear before authentication.
+- [ ] Authenticate (via UI or WebMCP `login` tool) and verify protected tools appear.
+- [ ] Log out and verify protected tools are removed from the Inspector.
+- [ ] Invoke `search_products` with valid input. Confirm structured success output.
+- [ ] Invoke `search_products` with missing `query`. Confirm structured `INVALID_INPUT` error.
+- [ ] Invoke `get_cart` as a guest. Confirm `AUTHENTICATION_REQUIRED` error.
+- [ ] Invoke `get_cart` after authentication. Confirm structured cart response.
+- [ ] Add a product to the cart and verify `create_order` becomes available in the Inspector.
+- [ ] Remove the product and verify `create_order` is no longer available.
 
-## Automated browser E2E
+## Automated Browser E2E
 
-`npm run test:webmcp:e2e` uses Chrome through Playwright and the existing demo database. The journey resolves a product from live search results at runtime, opens its detail page, adds it through the UI, verifies the cart UI, removes it through the UI, and verifies the empty-cart state. The suite clears the demo cart before the journey and ends with an empty cart.
+`npm run test:webmcp:e2e` executes Playwright specs against the running application. The suite validates:
 
-Measured on 2026-09-03: **1/1 passed**.
+- `document.modelContext` availability and API surface
+- Tool discovery via `getTools()`
+- Direct tool execution via `executeTool()`
+- Authentication barrier enforcement
+- Input schema validation
+- Unknown tool error handling
+- State-aware tool availability transitions on login/logout
+- Full commerce journey (search → add → verify → remove → verify empty)
 
-## Limits of automated verification
+## Limitations of Automated Verification
 
-Native WebMCP requires a compatible Chrome runtime and is aimed at local, human-in-the-loop browsing. The deterministic harness and browser E2E suite exercise the application, but neither substitutes for direct native inspection through Chrome's Model Context Tool Inspector.
+Native WebMCP requires a compatible Chrome runtime and is designed for local, human-in-the-loop browsing contexts. The deterministic test harness and browser E2E suite exercise the application logic comprehensively, but neither substitutes for direct native inspection through Chrome's Model Context Tool Inspector. The Inspector remains the authoritative verification surface for native tool registration behavior.

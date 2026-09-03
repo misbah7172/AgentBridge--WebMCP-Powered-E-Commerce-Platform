@@ -1,64 +1,76 @@
 # Failure Modes
 
-This document catalogs known failure modes, their causes, and expected agent behavior.
+This document catalogs the failure modes that agents may encounter when interacting with AgentBridge WebMCP tools, along with the expected error responses and recommended recovery strategies.
 
 ## Registry-Level Failures
 
-| Failure | Error Code | Retryable | Agent Action |
-|---------|-----------|-----------|--------------|
-| Tool does not exist | `TOOL_NOT_FOUND` | No | Stop. Do not guess tool names. |
-| Missing required parameter | `INVALID_INPUT` | No | Gather the missing information from the user or a prior tool result. |
-| Wrong parameter type | `INVALID_INPUT` | No | Correct the type and retry. |
+These errors are produced by the `WebMCPRegistry` before any API call is made.
+
+| Failure Condition | Error Code | Retryable | Recommended Agent Action |
+|-------------------|-----------|-----------|-------------------------|
+| Requested tool does not exist | `TOOL_NOT_FOUND` | No | Verify tool name against `getTools()`. Do not guess tool names. |
+| Required parameter missing | `INVALID_INPUT` | No | Provide the missing parameter. The error message identifies the field. |
+| Parameter type mismatch | `INVALID_INPUT` | No | Correct the type (e.g., string instead of number) and retry. |
+| Non-integer value for integer field | `INVALID_INPUT` | No | Provide a whole number (e.g., `2` instead of `2.5`). |
+| Value below minimum constraint | `INVALID_INPUT` | No | Adjust the value to meet the minimum (e.g., `quantity >= 1`). |
+| Value above maximum constraint | `INVALID_INPUT` | No | Adjust the value to meet the maximum. |
 | Invalid enum value | `INVALID_INPUT` | No | Use one of the documented enum values. |
-| Constraint violation (min/max) | `INVALID_INPUT` | No | Adjust the value to be within bounds. |
-| Not authenticated | `AUTHENTICATION_REQUIRED` | No | Use the `login` or `register` tool first. |
-| Cart is empty (checkout) | `CART_EMPTY` | No | Add items to the cart first. |
-| Network/transport failure | `EXECUTION_ERROR` | Yes | Retry after a brief delay. |
+| Protected tool called while unauthenticated | `AUTHENTICATION_REQUIRED` | No | Use the `login` or `register` tool first, then retry. |
+| Cart-dependent tool called with empty cart | `CART_EMPTY` | No | Add items to the cart before attempting checkout. |
+| Network or runtime failure during execution | `EXECUTION_ERROR` | Yes | Retry after a brief delay (maximum 2 attempts). |
 
 ## API-Level Business Failures
 
-| Failure | Error Code | Retryable | Agent Action |
-|---------|-----------|-----------|--------------|
-| Product not found | `PRODUCT_NOT_FOUND` | No | The product ID is invalid. Search for the correct product. |
-| Insufficient stock | `INSUFFICIENT_STOCK` | No | Inform the user. Suggest alternatives or a smaller quantity. |
-| Exceeds available stock | `EXCEEDS_STOCK` | No | Reduce the quantity to be within the available stock. |
-| Item not in cart | `ITEM_NOT_IN_CART` | No | The product was not added to the cart. Check cart contents. |
-| Invalid coupon code | `INVALID_COUPON` | No | Ask the user for a different code. Use `get_current_promotions` to find valid codes. |
-| Expired coupon | `COUPON_EXPIRED` | No | Inform the user. Suggest active promotions. |
-| Order not found | `ORDER_NOT_FOUND` | No | The order ID is invalid. Use `get_order_history` to find the correct ID. |
-| Unauthorized access | `UNAUTHORIZED_ACCESS` | No | The user does not own this resource. Do not retry. |
-| Order not cancellable | `NOT_CANCELLABLE` | No | Order is SHIPPED or DELIVERED. Inform user about return process. |
-| Already cancelled | `ALREADY_CANCELLED` | No | No action needed. Inform the user. |
-| Demo payment only | `DEMO_PAYMENT_ONLY` | No | Use `DEMO_CARD` as the payment method. |
-| Confirmation required | `DEMO_ORDER_CONFIRMATION_REQUIRED` | No | Set `confirmDemoOrder: true` after user explicitly confirms. |
-| Invalid credentials | (success: false) | No | Check email/password. Do not retry with the same credentials. |
-| Duplicate email | (success: false) | No | The email is already registered. Use `login` instead. |
+These errors originate from the server-side API and are passed through by the registry without transformation.
+
+| Failure Condition | Error Code | Retryable | Recommended Agent Action |
+|-------------------|-----------|-----------|-------------------------|
+| Product identifier not found | `PRODUCT_NOT_FOUND` | No | The identifier is invalid. Use `search_products` to obtain a valid ID. |
+| Insufficient stock for requested quantity | `INSUFFICIENT_STOCK` | No | Inform the user. Suggest a smaller quantity or use `get_product_recommendations` for alternatives. |
+| Quantity exceeds available stock | `EXCEEDS_STOCK` | No | Reduce the quantity to within available stock limits. |
+| Product not present in cart | `ITEM_NOT_IN_CART` | No | Verify cart contents with `get_cart` before updating or removing. |
+| Invalid coupon code | `INVALID_COUPON` | No | Request a different code from the user. Use `get_current_promotions` to discover valid codes. |
+| Expired coupon code | `COUPON_EXPIRED` | No | Inform the user and suggest currently active promotions. |
+| Order identifier not found | `ORDER_NOT_FOUND` | No | Use `get_order_history` to obtain a valid order ID. |
+| Unauthorized access to resource | `UNAUTHORIZED_ACCESS` | No | The user does not own this resource. Do not retry. |
+| Order cannot be cancelled (shipped/delivered) | `NOT_CANCELLABLE` | No | Inform the user that shipped or delivered orders require the return process. |
+| Order already cancelled | `ALREADY_CANCELLED` | No | No action needed. Confirm to the user that the order was previously cancelled. |
+| Non-demo payment method provided | `DEMO_PAYMENT_ONLY` | No | Use `DEMO_CARD` as the payment method. |
+| Missing demo order confirmation | `DEMO_ORDER_CONFIRMATION_REQUIRED` | No | Set `confirmDemoOrder: true` only after the user explicitly confirms. |
+| Invalid login credentials | `(success: false)` | No | Verify the email and password. Do not retry with the same credentials. |
+| Duplicate email on registration | `(success: false)` | No | The email is already registered. Suggest using `login` instead. |
 
 ## Execution Order Failures
 
-| Scenario | Expected Agent Behavior |
-|----------|------------------------|
-| Checkout before adding items | Agent should recognize `create_order` is unavailable and suggest adding items first. |
-| Protected operation before login | Agent should detect `AUTHENTICATION_REQUIRED` and use the `login` tool. |
-| Get order details without order history | Agent should call `get_order_history` first to obtain valid order IDs. |
-| Compare products without search | Agent should search for products first to obtain valid product IDs. |
-| Add to cart without product search | Agent should search for or identify a product first. |
-
-## Mid-Chain Failures
+These failures occur when agents attempt operations in an invalid sequence.
 
 | Scenario | Expected Agent Behavior |
 |----------|------------------------|
-| Search succeeds, add to cart fails (out of stock) | Report the stock issue. Suggest alternatives via `get_product_recommendations`. |
-| Add to cart succeeds, checkout fails (coupon invalid) | Report the coupon error. Proceed without coupon or find valid ones via `get_current_promotions`. |
-| Login succeeds, cart operation fails (network) | Retry the cart operation (EXECUTION_ERROR is retryable). |
-| Multiple operations, one fails mid-chain | Complete successful operations, report the failure, and suggest recovery. |
+| Checkout before adding items to cart | Recognize that `create_order` is unavailable. Inform the user and suggest adding items first. |
+| Protected operation before authentication | Detect `AUTHENTICATION_REQUIRED` and invoke the `login` tool before retrying. |
+| Order detail lookup without prior history retrieval | Call `get_order_history` first to obtain valid order identifiers. |
+| Product comparison without prior search | Execute `search_products` first to obtain valid product identifiers. |
+| Cart addition without product identification | Search for or identify a product before invoking `add_to_cart`. |
 
-## Agent Recovery Patterns
+## Mid-Chain Failure Scenarios
 
-1. **Authentication required** → Call `login` → Retry the original operation
-2. **Product not found** → Call `search_products` → Use a valid product ID
-3. **Out of stock** → Call `get_product_recommendations` → Suggest alternatives
-4. **Invalid coupon** → Call `get_current_promotions` → Suggest valid codes
-5. **Order not found** → Call `get_order_history` → Use a valid order ID
-6. **Network failure** → Wait briefly → Retry (up to 2 retries for EXECUTION_ERROR)
-7. **Cart empty for checkout** → Call `add_to_cart` → Then `create_order`
+These failures occur partway through a multi-step operation sequence.
+
+| Scenario | Expected Agent Behavior |
+|----------|------------------------|
+| Search succeeds, add-to-cart fails (out of stock) | Report the stock issue. Suggest alternatives via `get_product_recommendations`. |
+| Add-to-cart succeeds, checkout fails (invalid coupon) | Report the coupon error. Proceed without the coupon or discover valid codes via `get_current_promotions`. |
+| Authentication succeeds, subsequent operation fails (network) | Retry the operation. `EXECUTION_ERROR` is retryable. |
+| Multiple operations, one fails mid-sequence | Complete any independent successful operations, report the specific failure, and suggest a recovery path. |
+
+## Recovery Patterns
+
+| Trigger | Recovery Sequence |
+|---------|------------------|
+| `AUTHENTICATION_REQUIRED` | `login` → retry the original operation |
+| `PRODUCT_NOT_FOUND` | `search_products` → use a valid product ID |
+| `INSUFFICIENT_STOCK` | `get_product_recommendations` → suggest alternatives |
+| `INVALID_COUPON` | `get_current_promotions` → suggest valid codes |
+| `ORDER_NOT_FOUND` | `get_order_history` → use a valid order ID |
+| `EXECUTION_ERROR` | Wait briefly → retry (maximum 2 retries) |
+| `CART_EMPTY` | `search_products` → `add_to_cart` → retry checkout |

@@ -1,115 +1,116 @@
 # Architectural Decisions
 
-This log records key architectural decisions made during the AgentBridge implementation.
+This document records key architectural decisions made during the AgentBridge WebMCP implementation, their rationale, and their consequences.
 
 ---
 
-## ADR-001: Native WebMCP (Category 1) Only
+## ADR-001: Native WebMCP Implementation (Category 1)
 
-**Date**: 2026-09-03
-**Status**: Accepted
+**Date:** 2026-09-03
+**Status:** Accepted
 
-**Context**: The specification describes multiple WebMCP integration categories. Category 1 (Native) registers tools directly on `document.modelContext`. Category 2 (Adapter) uses an external bridge between a website API and a WebMCP proxy.
+**Context:** WebMCP integration can be implemented as Category 1 (Native), where tools are registered directly on `document.modelContext`, or as Category 2 (Adapter), where an external bridge mediates between the website API and a WebMCP proxy.
 
-**Decision**: AgentBridge is strictly Category 1 — Native WebMCP. All tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
+**Decision:** AgentBridge implements exclusively Category 1 — Native WebMCP. All 29 tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
 
-**Rationale**: The application already has same-origin API routes. Tools call these APIs via `fetch()` within the browser context, sharing the user's session cookies. An adapter would add unnecessary complexity and latency without benefit.
+**Rationale:** The application already exposes same-origin API routes. Tools invoke these APIs via `fetch()` within the browser context, sharing the user's session cookies and security boundaries. An adapter would introduce unnecessary latency, complexity, and an additional failure surface without providing material benefit.
 
-**Consequences**: Tools must be defined in client-side code. Server-side logic remains in API routes and services.
-
----
-
-## ADR-002: Custom WebMCPRegistry Over `use-webmcp-tool` Package
-
-**Date**: 2026-09-03
-**Status**: Accepted
-
-**Context**: The `use-webmcp-tool` npm package provides a React hook abstraction for WebMCP tool registration. The existing `WebMCPRegistry` class provides:
-- Singleton management
-- Native `document.modelContext` bridge with `AbortController`-based lifecycle
-- State-aware tool availability (auth, cart)
-- Input validation (types, enums, required fields, min/max constraints)
-- Structured error responses with five error codes
-- Execution listeners and tracing
-- Test-environment polyfill
-
-**Decision**: Do not adopt `use-webmcp-tool`. Continue with the custom `WebMCPRegistry`.
-
-**Rationale**: The custom registry already exceeds the package's capabilities. Adopting it would require abandoning state-aware gating, structured errors, and the test harness. The package would become a thin wrapper adding dependency risk without value.
-
-**Consequences**: Maintenance responsibility stays with the project. The registry is well-tested with 57+ deterministic tests.
+**Consequences:** All tool definitions reside in client-side code. Server-side business logic remains exclusively in API routes and service modules.
 
 ---
 
-## ADR-003: No Angular Patterns
+## ADR-002: Custom WebMCPRegistry
 
-**Date**: 2026-09-03
-**Status**: Accepted
+**Date:** 2026-09-03
+**Status:** Accepted
 
-**Context**: The specification references Angular-specific patterns (`provideExperimentalWebMcpTools`, `declareExperimentalWebMcpTool`, Signal Forms). AgentBridge uses Next.js/React.
+**Context:** The `use-webmcp-tool` npm package provides a React hook abstraction for WebMCP tool registration. The existing `WebMCPRegistry` class implements:
 
-**Decision**: Do not adopt Angular-specific APIs or patterns.
+- Singleton lifecycle management
+- Native `document.modelContext` bridge with `AbortController`-based registration
+- Three-tier state-aware tool availability (public, authenticated, transactional)
+- Input validation covering types, enums, required fields, integer checks, and min/max constraints
+- Five structured error codes with retryability and user-action metadata
+- Execution listeners, subscriber notifications, and tracing
+- Test-environment polyfill for Node.js
 
-**Rationale**: The architectural lessons (route-scoped tools, state-aware exposure) are already implemented via the React context providers and the `WebMCPRegistry`. Angular-specific DI patterns are not transferable.
+**Decision:** The project uses the custom `WebMCPRegistry` class. The `use-webmcp-tool` package is not adopted.
 
-**Consequences**: None. The architectural principles are applied through React-idiomatic patterns.
+**Rationale:** The custom registry exceeds the package's capabilities across every dimension. Adopting the package would require abandoning state-aware gating, structured error responses, and the deterministic test harness — capabilities that are central to the project's testing and evaluation framework.
 
----
-
-## ADR-004: Auth Tools Added to WebMCP
-
-**Date**: 2026-09-03
-**Status**: Accepted
-
-**Context**: Protected tools return `AUTHENTICATION_REQUIRED` when the user is not logged in, but agents had no way to authenticate through WebMCP. They had to rely on the human clicking the login button in the UI.
-
-**Decision**: Add four auth tools: `login`, `register`, `logout`, `get_account_info`. These call the existing `/api/auth/*` endpoints and dispatch a `webmcp-auth-change` custom event to sync the React `AuthContext`.
-
-**Rationale**: Agents should be able to complete full journeys autonomously. Without auth tools, any journey requiring a login would stall.
-
-**Consequences**: Tool count increased from 25 to 29. Auth tools sync both the registry state and the React UI via custom events. The `logout` tool requires authentication to prevent agents from logging out other users' sessions.
+**Consequences:** Maintenance responsibility for the registry remains with the project. The registry is validated through 57 deterministic tests.
 
 ---
 
-## ADR-005: Integer Validation with Constraints
+## ADR-003: Framework-Agnostic Tool Definitions
 
-**Date**: 2026-09-03
-**Status**: Accepted
+**Date:** 2026-09-03
+**Status:** Accepted
 
-**Context**: The `quantity` field in cart tools was typed as `number` in the schema, allowing fractional values like 2.5. The API would accept these but truncate or error unpredictably.
+**Context:** The specification references Angular-specific patterns (`provideExperimentalWebMcpTools`, `declareExperimentalWebMcpTool`, Signal Forms). AgentBridge uses Next.js and React.
 
-**Decision**: Added `integer` type support and `minimum`/`maximum` constraint validation to the registry's `validateInput` function. Changed `quantity` fields to `type: 'integer', minimum: 1`.
+**Decision:** Angular-specific APIs and patterns are not adopted. Tool definitions are framework-agnostic TypeScript objects.
 
-**Rationale**: Validating at the registry level provides clear, structured error messages before the API call is made. This is cheaper and more informative than letting the API reject the request.
+**Rationale:** The architectural principles embodied by the Angular patterns — route-scoped tool exposure, state-aware availability, schema validation — are already implemented through the `WebMCPRegistry` and React context providers using idiomatic Next.js/React patterns.
 
-**Consequences**: Tools using `type: 'integer'` are validated for `Number.isInteger()`. Minimum/maximum constraints are enforced for all numeric types.
+**Consequences:** Tool definitions are plain TypeScript objects with no framework coupling, making them testable in both browser and Node.js environments.
+
+---
+
+## ADR-004: Authentication Tools
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Context:** When protected tools returned `AUTHENTICATION_REQUIRED`, agents had no mechanism to authenticate through WebMCP. They were dependent on a human user clicking the login button in the React UI.
+
+**Decision:** Four authentication tools were added: `login`, `register`, `logout`, and `get_account_info`. These tools invoke the existing `/api/auth/*` endpoints and dispatch a `webmcp-auth-change` `CustomEvent` to synchronize the React `AuthContext`.
+
+**Rationale:** Agent autonomy requires the ability to complete full journeys — including authentication — without relying on human UI interaction. This is particularly important for Journey C (auth barrier detection and recovery).
+
+**Consequences:** The tool count increased from 25 to 29. The `AuthContext` `useEffect` now includes an event listener for WebMCP-initiated auth state changes. The `logout` tool requires authentication to prevent unauthorized session termination.
+
+---
+
+## ADR-005: Integer Validation with Range Constraints
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Context:** Quantity fields in cart tools were originally typed as `number` in the JSON schema, permitting fractional values (e.g., `2.5`) and negative values (e.g., `-3`). These values would reach the API and produce inconsistent behavior.
+
+**Decision:** The registry's `validateInput` function was enhanced to support `integer` type validation (via `Number.isInteger()`) and `minimum`/`maximum` range constraints. Cart tool schemas were updated to use `type: 'integer', minimum: 1` for quantity fields.
+
+**Rationale:** Validating at the registry level produces clear, structured error messages before any API call is made. This is more efficient and informative than allowing invalid values to reach the server.
+
+**Consequences:** Tools specifying `type: 'integer'` are validated with `Number.isInteger()`. Numeric fields with `minimum` or `maximum` constraints are bounds-checked prior to execution.
 
 ---
 
 ## ADR-006: LLM Provider Abstraction
 
-**Date**: 2026-09-03
-**Status**: Accepted
+**Date:** 2026-09-03
+**Status:** Accepted
 
-**Context**: The LLM evaluation runner was hardcoded to OpenAI's Responses API. This made it impossible to test the evaluator without an API key or compare different model providers.
+**Context:** The LLM evaluation runner was hardcoded to the OpenAI Responses API. This prevented evaluator testing without an API key and precluded future provider comparisons.
 
-**Decision**: Introduced an `LLMProvider` interface with `OpenAIProvider` and `MockProvider` implementations. Provider selection is based on environment variables.
+**Decision:** An `LLMProvider` interface was introduced with `OpenAIProvider` and `MockProvider` implementations. Provider selection is determined by environment variables, with automatic fallback to the mock provider when no API key is configured.
 
-**Rationale**: The mock provider enables CI testing of the evaluator pipeline. The abstraction supports future provider additions without modifying the evaluation runner.
+**Rationale:** The mock provider enables CI/CD testing of the evaluator pipeline without API credentials. The abstraction supports future additions (Anthropic, Google, local models) without modifying the evaluation runner.
 
-**Consequences**: The evaluation runner imports from `llmProviders.ts`. Setting `WEBMCP_EVAL_PROVIDER=mock` runs the evaluator without an API key.
+**Consequences:** The evaluation runner imports from `scripts/llmProviders.ts`. Setting `WEBMCP_EVAL_PROVIDER=mock` executes the evaluator with deterministic responses.
 
 ---
 
-## ADR-007: Custom Events for WebMCP-UI Sync
+## ADR-007: Custom Events for Cross-Boundary State Synchronization
 
-**Date**: 2026-09-03
-**Status**: Accepted
+**Date:** 2026-09-03
+**Status:** Accepted
 
-**Context**: When an agent logs in via the `login` WebMCP tool, the React `AuthContext` doesn't know about the state change because it happened outside the React component tree.
+**Context:** When an AI agent authenticates via the `login` WebMCP tool, the React `AuthContext` is unaware of the state change because the operation occurred outside the React component tree.
 
-**Decision**: Auth tools dispatch a `webmcp-auth-change` CustomEvent on `window`. The `AuthContext` listens for this event and updates its state accordingly.
+**Decision:** Authentication tools dispatch a `webmcp-auth-change` `CustomEvent` on `window`. The `AuthContext` listens for this event and updates its internal state to reflect the change.
 
-**Rationale**: Custom events are a standard browser API for cross-boundary communication. This approach avoids tight coupling between the WebMCP tools and React components while keeping the UI in sync.
+**Rationale:** `CustomEvent` is a standard browser API for cross-boundary communication that avoids tight coupling between WebMCP tools and React components. The event-driven approach ensures the UI reflects agent-initiated state changes without requiring direct dependency injection.
 
-**Consequences**: The `AuthContext` `useEffect` now returns a cleanup function that removes the event listener. This pattern can be extended to other state synchronization needs.
+**Consequences:** The `AuthContext` `useEffect` registers an event listener and returns a cleanup function for proper unmount handling. This pattern is extensible to other state synchronization requirements.

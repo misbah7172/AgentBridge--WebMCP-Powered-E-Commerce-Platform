@@ -1,100 +1,127 @@
-# Architecture
+# System Architecture
 
-## System Overview
+## Overview
 
-AgentBridge is a Next.js e-commerce application that serves both human shoppers and AI agents through a unified architecture. The same APIs and business logic serve both the React UI and WebMCP tool invocations.
+AgentBridge is a Next.js 14 full-stack e-commerce application that serves both human shoppers and AI agents through a unified, server-authoritative architecture. The same API routes, service layer, and database serve both the React UI and WebMCP tool invocations, ensuring consistent behavior, security enforcement, and state management regardless of the caller.
 
 ## Architecture Diagram
 
 ```
-                 AI Agent (Browser)
-                     │
-                     │ WebMCP
-                     ▼
-           ┌──────────────────┐
-           │   AgentBridge    │
-           │ Native WebMCP    │
-           ├──────────────────┤
-           │ Tool Registry    │ ← WebMCPRegistry class
-           │ Tool Discovery   │ ← getTools() / subscribe()
-           │ Tool Schemas     │ ← JSON Schema validation
-           │ Tool Execution   │ ← executeTool()
-           │ State Awareness  │ ← Auth + Cart state gating
-           │ Input Validation │ ← Type, enum, constraint checks
-           │ Error Handling   │ ← Structured error responses
-           └────────┬─────────┘
-                    │
-                    ▼
-           ┌──────────────────┐
-           │   Next.js App    │
-           ├──────────────────┤
-           │ React UI         │ ← Pages, components
-           │ Context Providers│ ← Auth, Cart, Wishlist
-           │ API Routes       │ ← Same-origin REST endpoints
-           └────────┬─────────┘
-                    │
-                    ▼
-           ┌──────────────────┐
-           │ Commerce Services│
-           ├──────────────────┤
-           │ Product Service  │
-           │ Cart Service     │
-           │ Order Service    │
-           │ Wishlist Service │
-           │ Coupon Service   │
-           │ Auth Utilities   │
-           └────────┬─────────┘
-                    │
-                    ▼
-           ┌──────────────────┐
-           │ PostgreSQL/Neon  │
-           │ via Prisma ORM   │
-           └──────────────────┘
+                         ┌──────────────────────┐
+                         │       AI Agent       │
+                         │   (Browser Context)  │
+                         └──────────┬───────────┘
+                                    │
+                          document.modelContext
+                        getTools() / executeTool()
+                                    │
+                         ┌──────────▼───────────┐
+                         │   WebMCP Registry    │
+                         │                      │
+                         │  • Tool Registration │
+                         │  • Schema Validation │
+                         │  • State Gating      │
+                         │  • Error Structuring │
+                         │  • Native Bridge     │
+                         └──────────┬───────────┘
+                                    │
+                 ┌──────────────────┼──────────────────┐
+                 │                  │                   │
+      ┌──────────▼──────────┐ ┌────▼────────┐ ┌───────▼──────────┐
+      │     React UI        │ │ API Routes  │ │  Context Layer   │
+      │     (Next.js)       │ │ (18 routes) │ │ (Auth/Cart/WL)   │
+      └──────────┬──────────┘ └─────┬───────┘ └──────────────────┘
+                 │                  │
+                 └────────┬─────────┘
+                 ┌────────▼─────────┐
+                 │ Commerce Services│
+                 │                  │
+                 │  productService  │
+                 │  cartService     │
+                 │  orderService    │
+                 │  wishlistService │
+                 │  couponService   │
+                 └────────┬─────────┘
+                 ┌────────▼─────────┐
+                 │   PostgreSQL     │
+                 │  (Neon / Prisma) │
+                 └──────────────────┘
 ```
 
 ## Layer Responsibilities
 
 ### WebMCP Layer (`src/webmcp/`)
-- **Registry** — singleton that manages tool lifecycle, state, and native WebMCP bridge
-- **Tools** — 29 tool definitions with schemas and execute functions
-- **Types** — TypeScript interfaces for tools, schemas, and responses
-- **Testing** — Direct execution harness for deterministic testing
+
+The WebMCP layer is responsible for tool lifecycle management and agent-facing interfaces.
+
+| Component | Responsibility |
+|-----------|---------------|
+| `registry.ts` | Singleton orchestrator managing tool registration, native `document.modelContext` bridge, `AbortController`-based lifecycle, state tracking, input validation, error structuring, and execution listeners |
+| `tools/*.ts` | 29 tool definitions organized by domain (auth, product, cart, wishlist, order, shipping), each with semantic descriptions, JSON schemas, and async execute functions |
+| `types.ts` | TypeScript interfaces for `WebMCPTool`, `JSONSchema`, `RegisteredToolInfo`, and response contracts |
+| `testing/` | Direct execution trace harness for deterministic testing without browser context |
 
 ### Application Layer (`src/app/`)
-- **Pages** — Next.js pages for home, products, cart, checkout, account, compare
-- **API Routes** — 18 REST endpoints handling all commerce operations
-- **Layout** — Root layout with auth/cart/wishlist providers and WebMCP indicator
+
+| Component | Responsibility |
+|-----------|---------------|
+| Pages | Next.js route handlers for home, products, product detail, cart, checkout, compare, and account |
+| API Routes | 18 REST endpoints handling authentication, products, cart, orders, wishlist, coupons, shipping, and addresses |
+| Layout | Root layout providing auth, cart, and wishlist context providers plus the WebMCP status indicator |
 
 ### Service Layer (`src/lib/services/`)
-- **productService** — Catalog search, filter, sort, recommendations, comparison, promotions
-- **cartService** — Cart CRUD with stock validation and price calculation
-- **orderService** — Order creation, history, details, cancellation with authorization
-- **wishlistService** — Wishlist management
-- **couponService** — Coupon validation
+
+| Service | Responsibility |
+|---------|---------------|
+| `productService` | Catalog search, filtering, sorting, recommendations, comparison, and promotions |
+| `cartService` | Cart CRUD operations with stock validation, discount calculation, and price aggregation |
+| `orderService` | Order creation, history retrieval, detail inspection, and cancellation with ownership verification |
+| `wishlistService` | Wishlist item management |
+| `couponService` | Coupon code validation and discount resolution |
 
 ### Context Layer (`src/context/`)
-- **AuthContext** — User authentication state, login/logout, WebMCP auth event sync
-- **CartContext** — Cart state, UI drawer, WebMCP execution listener
-- **WishlistContext** — Wishlist state management
+
+| Provider | Responsibility |
+|----------|---------------|
+| `AuthContext` | User authentication state, login/logout handlers, WebMCP auth event synchronization |
+| `CartContext` | Cart state management, UI drawer control, WebMCP execution listener for cart count updates |
+| `WishlistContext` | Wishlist state management |
 
 ### Data Layer
-- **Prisma ORM** — Type-safe database access
-- **PostgreSQL/Neon** — Cloud PostgreSQL database
-- **Schema** — 11 models: User, Address, Category, Product, Review, Cart, CartItem, Wishlist, WishlistItem, Order, OrderItem, Coupon
+
+| Component | Technology |
+|-----------|-----------|
+| ORM | Prisma 5 with type-safe client generation |
+| Database | PostgreSQL hosted on Neon |
+| Models | User, Address, Category, Product, Review, Cart, CartItem, Wishlist, WishlistItem, Order, OrderItem, Coupon |
 
 ## Data Flow
 
-### Human User
+### Human User Path
+
 ```
-Browser → React UI → API Route → Service → Prisma → PostgreSQL
+Browser → React Component → fetch(/api/...) → API Route Handler
+  → Authentication Check → Service Layer → Prisma Client → PostgreSQL
+  → Response → React State Update → UI Re-render
 ```
 
-### AI Agent
+### AI Agent Path
+
 ```
-Agent → document.modelContext.executeTool() → WebMCP Registry
-  → Validates auth/state/input
-  → Tool.execute() → fetch(/api/...) → API Route → Service → Prisma → PostgreSQL
-  → Returns structured result → Agent processes result
+Agent → document.modelContext.executeTool(name, input)
+  → WebMCP Registry: validate schema, check auth, check state
+  → Tool.execute() → fetch(/api/...) → API Route Handler
+  → Authentication Check → Service Layer → Prisma Client → PostgreSQL
+  → Response → Registry: update state, notify listeners
+  → Structured Result → Agent
 ```
 
-Both paths share identical API routes, services, and database, ensuring consistent behavior and security enforcement.
+Both paths share identical API routes, service logic, database operations, and security enforcement. The WebMCP registry adds a validation and state-gating layer before the API call, ensuring agents receive structured error responses for invalid inputs, missing authentication, or unavailable state before any server communication occurs.
+
+## Cross-Boundary State Synchronization
+
+When an AI agent modifies application state through WebMCP tools (e.g., logging in, adding to cart), the changes must be reflected in both the WebMCP registry and the React UI:
+
+- **Authentication**: Auth tools dispatch a `webmcp-auth-change` `CustomEvent` on `window`. The `AuthContext` listens for this event and updates its state, ensuring the UI reflects agent-initiated login/logout.
+- **Cart state**: The `CartContext` subscribes to WebMCP execution events. Cart-modifying tool results update the cart item count, which the registry uses to gate `create_order` availability.
+- **Tool availability**: The registry re-syncs with the native `document.modelContext` API on every state change, aborting stale registrations and creating new ones via `AbortController` signals.

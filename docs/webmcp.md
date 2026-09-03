@@ -2,132 +2,123 @@
 
 ## What is WebMCP?
 
-WebMCP (Web Model Context Protocol) is an emerging browser API that allows web pages to register structured tools that AI agents operating within the browser can discover and invoke. Unlike remote MCP servers, WebMCP tools execute within the browser's same-origin context, sharing the user's session, cookies, and security boundaries.
+WebMCP (Web Model Context Protocol) is an emerging browser API that enables web pages to register structured, schema-validated tools for AI agents operating within the active browser context. Unlike remote MCP servers, WebMCP tools execute within the browser's same-origin security boundary, inheriting the user's session, cookies, and permission policies.
 
-## Why AgentBridge Uses WebMCP
+## Implementation Category
 
-AgentBridge uses Native WebMCP to expose its e-commerce operations as structured, discoverable tools rather than requiring agents to:
-- Parse visual page layout (unreliable for complex commerce operations)
-- Reverse-engineer API endpoints from network traffic
-- Navigate complex multi-step UI flows
+AgentBridge implements **Category 1 — Native WebMCP**. Tools are registered directly on `document.modelContext` using the Chrome Imperative API. No external adapter, proxy, or remote MCP server is involved. See [ADR-001](decisions.md#adr-001-native-webmcp-implementation-category-1) for the rationale.
 
-WebMCP provides agents with:
-- **Stable tool names** that don't change with UI redesigns
-- **Typed schemas** that validate input before execution
-- **Structured outputs** that are machine-readable
-- **State-aware availability** that prevents invalid operations
-- **Existing security boundaries** inherited from the browser session
-
-## Native WebMCP Architecture
-
-AgentBridge is a **Category 1 — Native WebMCP implementation**:
+## Native Architecture
 
 ```
-           AI Agent
-              │
-              │ WebMCP (document.modelContext)
-              ▼
-    ┌──────────────────┐
-    │   AgentBridge     │
-    │ Native WebMCP     │
-    ├──────────────────┤
-    │ Discovery         │ ← getTools()
-    │ Schemas           │ ← inputSchema per tool
-    │ Execution         │ ← executeTool()
-    │ State Awareness   │ ← auth + cart state gating
-    │ Validation        │ ← required fields, types, enums, constraints
-    └────────┬─────────┘
-             │
-             ▼
-       Web Application
-             │
-    ┌────────┴─────────┐
-    │ UI / State / API │ ← Same-origin API routes
-    └──────────────────┘
+                 AI Agent
+                    │
+                    │ document.modelContext
+                    ▼
+          ┌──────────────────┐
+          │   WebMCPRegistry │
+          │                  │
+          │  Discovery       │ ← getTools()
+          │  Schemas         │ ← JSON Schema validation
+          │  Execution       │ ← executeTool()
+          │  State Gating    │ ← Auth + cart state
+          │  Error Handling  │ ← Structured responses
+          │  Native Bridge   │ ← AbortController lifecycle
+          └────────┬─────────┘
+                   │ fetch()
+                   ▼
+          ┌──────────────────┐
+          │  Same-Origin API │
+          │  (18 routes)     │
+          └────────┬─────────┘
+                   │
+                   ▼
+          ┌──────────────────┐
+          │  Commerce Layer  │
+          │  (Services + DB) │
+          └──────────────────┘
 ```
-
-Tools are registered on `document.modelContext` via the `WebMCPRegistry` class. The registry bridges to the browser's native WebMCP API when available, using `AbortController`-based signal management for tool lifecycle.
 
 ## Tool Registration
 
-Tools are registered imperatively during the React application's initial client-side mount in `AuthContext`. Each tool is defined with:
-- `name` — stable, semantic identifier
-- `description` — agent-friendly natural language guidance
-- `inputSchema` — JSON Schema with types, constraints, and descriptions
-- `permission` — PUBLIC, AUTHENTICATED, or TRANSACTIONAL
-- `availability` — optional state constraint (e.g., CART_POPULATED)
-- `execute` — async function that calls the same-origin API
+Tools are registered imperatively during the React application's initial client-side mount via the `AuthContext` provider. Each tool is defined as a TypeScript object with:
+
+| Property | Purpose |
+|----------|---------|
+| `name` | Stable, semantic identifier (e.g., `search_products`, `add_to_cart`) |
+| `description` | Agent-facing natural language guidance: when to use, what it returns, identifier provenance |
+| `inputSchema` | JSON Schema with types, required fields, constraints, and parameter descriptions |
+| `permission` | Access tier: `PUBLIC`, `AUTHENTICATED`, or `TRANSACTIONAL` |
+| `availability` | Optional state constraint (e.g., `CART_POPULATED`) |
+| `category` | Domain grouping: Auth, Products, Cart, Wishlist, Orders, Shipping, Account, Promotions |
+| `execute` | Async function that invokes the same-origin API via `fetch()` |
 
 ## Tool Discovery
 
-Agents discover tools via `document.modelContext.getTools()`, which returns each tool's name, description, schema, permission, availability, category, and current status (AVAILABLE, LOGIN_REQUIRED, or STATE_UNAVAILABLE).
+Agents discover tools via `document.modelContext.getTools()`, which returns each tool's name, description, schema, permission, category, and current status:
 
-When the user logs in or out, or when the cart state changes, the registry re-syncs with the native WebMCP API by aborting stale registrations and creating new ones.
+| Status | Meaning |
+|--------|---------|
+| `AVAILABLE` | Tool is ready for execution |
+| `LOGIN_REQUIRED` | Tool requires authentication; use `login` or `register` first |
+| `STATE_UNAVAILABLE` | Tool requires a specific state (e.g., populated cart) |
 
-## Tool Schemas
-
-Schemas are JSON Schema objects that validate:
-- **Required fields** — missing required parameters are rejected before execution
-- **Types** — string, number, integer, boolean, array
-- **Enums** — allowed values for constrained fields
-- **Constraints** — minimum/maximum for numeric fields
-- **Descriptions** — semantic descriptions for each parameter
+When authentication or cart state changes, the registry re-syncs with the native API by aborting stale registrations via `AbortController` signals and creating new ones.
 
 ## Tool Execution
 
-Tools execute via `document.modelContext.executeTool(name, input)`. The registry:
-1. Validates the tool exists
-2. Checks authentication requirements
-3. Checks state availability (e.g., cart populated)
-4. Validates input against the schema
-5. Executes the tool's async function
-6. Updates internal state from the result (e.g., cart item count)
-7. Returns the structured result
+Execution flow through `document.modelContext.executeTool(name, input)`:
 
-## Structured Outputs
+1. **Tool lookup** — verify the tool is registered; return `TOOL_NOT_FOUND` if absent
+2. **Authentication check** — verify the session meets the tool's permission tier
+3. **State check** — verify application state meets the tool's availability constraint
+4. **Schema validation** — validate input against the declared JSON Schema
+5. **Execution** — invoke the tool's async `execute` function
+6. **State update** — propagate cart count changes and notify listeners
+7. **Result** — return the structured response to the caller
 
-All tool results follow the `ToolExecutionResponse` interface:
-- `success: boolean` — whether the operation succeeded
-- `error?: string` — stable error code (e.g., 'PRODUCT_NOT_FOUND')
-- `message?: string` — human-readable description
-- `errorDetails?: { code, message, retryable, userActionRequired }` — structured error metadata
-- `data` / domain-specific fields — the actual result data
+## Structured Error Responses
 
-## Error Handling
+All errors include an `errorDetails` object:
 
-Five registry-level error codes:
-| Code | Meaning | Retryable |
-|------|---------|-----------|
-| TOOL_NOT_FOUND | Tool not registered | No |
-| INVALID_INPUT | Schema validation failed | No |
-| AUTHENTICATION_REQUIRED | Protected tool called while signed out | No |
-| CART_EMPTY | Cart-populated tool called with empty cart | No |
-| EXECUTION_ERROR | Network/runtime failure | Yes |
-
-API-level business errors (stock, coupon, ownership, order state) are passed through in the API response.
-
-## State-Aware Exposure
-
-See [state model](webmcp-state-model.md) for the complete state transition table.
+```typescript
+{
+  success: false,
+  error: 'ERROR_CODE',
+  message: 'Human-readable description',
+  errorDetails: {
+    code: 'ERROR_CODE',
+    message: 'Detailed explanation',
+    retryable: boolean,
+    userActionRequired: boolean
+  }
+}
+```
 
 ## Browser Requirements
 
-- Chrome with WebMCP support enabled
-- `Origin-Agent-Cluster: ?1` response header
-- `Permissions-Policy: tools=(self)` response header
+| Requirement | Configuration |
+|------------|--------------|
+| Browser | Chrome with WebMCP support |
+| Feature flag | `chrome://flags/#enable-webmcp-testing` enabled |
+| Response header | `Origin-Agent-Cluster: ?1` |
+| Permission policy | `Permissions-Policy: tools=(self)` |
 
-## Security Considerations
+## Security Model
 
-- Tools execute within the browser's same-origin context
-- HTTP-only JWT cookies provide session authentication
-- Server-side API routes enforce ownership, authorization, and business rules
-- `tools=(self)` restricts WebMCP tools to the same origin
-- Demo checkout requires explicit confirmation and only accepts DEMO_CARD
-- Administrative functions are not exposed through WebMCP
+| Control | Implementation |
+|---------|---------------|
+| Session authentication | JWT (HS256) in HTTP-only cookies with 7-day expiry |
+| API authorization | Server-side ownership verification on all protected resources |
+| Origin restriction | `Permissions-Policy: tools=(self)` confines tools to same origin |
+| Agent isolation | `Origin-Agent-Cluster: ?1` signals agent-aware origin isolation |
+| Input validation | Registry-level schema validation before any API execution |
+| Checkout gating | Populated cart + `confirmDemoOrder: true` + `DEMO_CARD` payment method |
+| Scope limitation | Administrative functions are not exposed through WebMCP |
 
 ## Current Limitations
 
-- WebMCP requires compatible Chrome configuration (experimental feature)
-- Product variants are derived from specifications, not SKU-level inventory
-- No production payment integration (demo only)
-- LLM evaluation metrics require a configured API provider
+- WebMCP requires Chrome with the experimental feature flag enabled.
+- Product variants are derived from stored specifications, not SKU-level inventory.
+- LLM evaluation metrics require a configured API provider; no results are fabricated when absent.
+- This is a demonstration platform with a simulated checkout flow. It does not integrate with production payment processors.

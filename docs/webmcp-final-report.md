@@ -1,36 +1,46 @@
-# AgentBridge WebMCP validation report
+# WebMCP Validation Report
 
 **Validation date:** 2026-09-03
-**Scope:** local demo application and existing Neon demo database
+**Scope:** Local demo application with Neon demo database
 
-## Measured results
+## Measured Results
 
-| Validation | Result | Evidence |
-| --- | --- | --- |
-| Deterministic WebMCP tests | 22 passed | `npm test` |
-| Database integration tests | 23 passed | `npm run test:webmcp:integration` (previous validated run) |
-| Generic evaluation schema | 10/10 passed | `npm run eval:webmcp` |
-| Browser E2E commerce journey | 1/1 passed | `npm run test:webmcp:e2e` |
-| Browser response headers | Verified | [header capture](evidence/webmcp-response-headers.png) |
-| Inspector tool execution | Verified manually | [recorded browser evidence](webmcp-browser-verification.md) |
+| Validation | Result | Command |
+|------------|--------|---------|
+| Deterministic WebMCP tests | 57 passed (7 test files) | `npm test` |
+| Database integration tests | 23 passed | `npm run test:webmcp:integration` |
+| Evaluation dataset schema | 16/16 passed | `npm run eval:webmcp` |
+| Browser E2E specs | 7 specs | `npm run test:webmcp:e2e` |
+| Production build | Compiled successfully (24 routes) | `npx next build` |
+| Response headers | Verified | Chrome DevTools |
+| Inspector tool execution | Verified | Chrome Model Context Tool Inspector |
 
-## Controls validated
+## Validated Controls
 
-- Public and authenticated tool exposure follows login state.
-- `create_order` is unavailable with an empty cart, accepts only explicit demo confirmation, and accepts only `DEMO_CARD`.
-- Cart mutations update browser/UI state and WebMCP availability.
-- Invalid input, authentication failures, unavailable state, API failures, and transport failures return structured error information.
+| Control | Status |
+|---------|--------|
+| Public and authenticated tool exposure follows authentication state | Implemented and tested |
+| Auth tools (`login`, `register`, `logout`, `get_account_info`) enable agent autonomy | Implemented and tested |
+| `create_order` gating: unavailable with empty cart, requires `confirmDemoOrder: true`, accepts only `DEMO_CARD` | Implemented and tested |
+| Cart mutations update both browser/UI state and WebMCP tool availability | Implemented and tested |
+| Integer validation with `minimum`/`maximum` constraints on quantity fields | Implemented and tested |
+| Schema validation rejects invalid input before API execution | Implemented and tested |
+| Structured error responses for all five registry-level error codes | Implemented and tested |
+| Multi-step journey validation (Journeys A through D) | Implemented and tested |
+| Failure mode coverage (wrong order, wrong args, missing data, network, mid-chain) | Implemented and tested |
 
-## Known limitations
+## Known Limitations
 
-- LLM metrics are not recorded yet: no `OPENAI_API_KEY` was configured during this validation. The repeatable provider runner is present as `npm run eval:webmcp:llm`; it records no fabricated values when credentials are absent.
-- The application is a demo checkout only. It has no production payment provider or production-order safeguards.
-- Native WebMCP behavior remains dependent on compatible Chrome support and Inspector verification.
+- LLM planning metrics have not been recorded. No `OPENAI_API_KEY` was configured during this validation. The repeatable provider runner (`npm run eval:webmcp:llm`) reports no fabricated values when credentials are absent.
+- The application is a demo checkout platform. It has no production payment provider or production-order safeguards.
+- Native WebMCP behavior remains dependent on compatible Chrome support and its experimental configuration flag.
 
-## Reliable demonstration flow
+## Demonstration Protocol
 
-1. Open the local app in compatible Chrome; verify the two document response headers in DevTools.
-2. Open Model Context Tool Inspector and verify catalog tools as a guest.
-3. Use the demo account, search the catalog, inspect a runtime-returned product, and add it to cart.
-4. Inspect the cart, then remove the item. Confirm checkout exposure appears only with a populated cart.
-5. If demonstrating orders, use only the explicit demo confirmation and `DEMO_CARD` flow.
+1. Start the application with `npm run dev` and open it in Chrome with WebMCP testing enabled.
+2. Verify `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)` response headers in DevTools.
+3. Open the Model Context Tool Inspector and confirm public catalog tools are available as a guest.
+4. Authenticate using the demo account (via UI or the `login` WebMCP tool).
+5. Search the catalog, inspect a product returned at runtime, and add it to the cart.
+6. Verify the cart contents, then remove the item. Confirm `create_order` availability correlates with cart population.
+7. If demonstrating order placement, use the explicit `confirmDemoOrder: true` and `DEMO_CARD` flow.

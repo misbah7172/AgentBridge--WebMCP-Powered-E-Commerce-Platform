@@ -1,18 +1,25 @@
-# WebMCP state model
+# WebMCP State Model
 
-| Application state | Native tools exposed | Expected behavior |
-| --- | --- | --- |
-| Guest/catalog | Public catalog and shipping tools | Search, filter, inspect products, compare products, and calculate shipping only. |
-| Authenticated, cart empty | Public and authenticated account, cart, wishlist, and order-management tools; no `create_order` | Cart reads return an empty structured cart; mutation tools validate product ID and quantity. |
-| Authenticated, cart populated | Public and authenticated tools plus `create_order` | The checkout tool is registered only while the current cart contains an item. |
-| Demo checkout confirmation | `create_order` | The caller must provide `confirmDemoOrder: true`; the API accepts only `DEMO_CARD` and records an order only in this demo database. |
-| Checkout completed | Public and authenticated tools; no `create_order` | No duplicate checkout completion tool remains active. |
-| Logged out | Public tools only | Protected tools are unregistered from native WebMCP. The UI may show login affordances separately. |
+This document defines the state-aware tool exposure model implemented by the `WebMCPRegistry`. Tool availability is determined by the intersection of authentication state and cart contents.
 
-The current code implements all listed registration boundaries. `create_order` is a demo-only transactional tool: it is unavailable for an empty cart, requires an explicit confirmation field, and the API rejects non-demo payment methods. There is no production payment integration.
+## State Transition Table
 
-## State transitions
+| Application State | Exposed Tool Categories | Behavioral Constraints |
+|-------------------|------------------------|----------------------|
+| **Guest** | Public catalog tools, shipping estimate, `login`, `register`, `get_account_info` | Protected tools return `AUTHENTICATION_REQUIRED`. No cart, wishlist, or order operations. |
+| **Authenticated, cart empty** | All public and authenticated tools (cart, wishlist, orders, addresses); `create_order` unavailable | Cart reads return an empty structured response. Mutation tools validate product identifiers and stock. `create_order` returns `CART_EMPTY`. |
+| **Authenticated, cart populated** | All tools including `create_order` | Checkout tool is registered only while the cart contains at least one item. |
+| **Demo checkout confirmation** | `create_order` active | The caller must provide `confirmDemoOrder: true`. The API accepts only `DEMO_CARD` and records the order exclusively in the demo database. |
+| **Checkout completed** | All public and authenticated tools; `create_order` unavailable | The cart is cleared upon order creation. No duplicate checkout tool remains active. |
+| **Logged out** | Public tools only | All protected tool registrations are aborted. The UI may present login affordances independently. |
 
-`login` registers protected tools. `logout` aborts their native registrations and resets cart state. Cart mutation responses return an updated cart summary, which updates WebMCP availability and the page cart state. The registry aborts the native `create_order` registration when the cart becomes empty, including after an order is created.
+## State Transitions
 
-Evaluation cases are inventory-agnostic. They express intent and use runtime placeholders such as `${criteria}`, `${resolvedProductId}`, and `${cartItemProductId}`. Fixture providers resolve those values at execution time; the cases must never contain a production/demo SKU, price, brand, or category.
+- **Login** registers protected tools on `document.modelContext` and dispatches a `webmcp-auth-change` event to synchronize the React UI.
+- **Logout** aborts all protected tool native registrations, resets cart state, and dispatches the corresponding event.
+- **Cart mutations** return an updated cart summary. The `CartContext` updates the registry's cart item count, which determines `create_order` availability. The registry aborts or registers the native `create_order` tool accordingly.
+- **Order creation** clears the cart, which in turn removes `create_order` availability.
+
+## Evaluation Case Conventions
+
+Evaluation cases are inventory-agnostic. They express user intent using runtime placeholders such as `${criteria}`, `${resolvedProductId}`, and `${cartItemProductId}`. Fixture providers resolve these values at execution time. Cases must never contain production or demo SKUs, prices, brands, or categories.

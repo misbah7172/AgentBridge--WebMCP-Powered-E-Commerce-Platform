@@ -1,54 +1,56 @@
-# WebMCP tool contracts
+# WebMCP Tool Contracts
 
-## Contract rules
+This document defines the behavioral contracts that govern all 29 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 57 deterministic tests.
 
-- Tool inputs are JSON objects and are checked for required fields, primitive types, and declared enums by the registry.
-- Product and order identifiers must come from a prior catalog or account result.
-- Successful tools return the API’s structured success payload. Failures retain `success: false`, a stable `error` code, a message, and registry-generated `errorDetails` where the failure occurs before the API call.
-- `errorDetails` contains `code`, `message`, `retryable`, and, when applicable, `userActionRequired`.
+## Contract Rules
 
-## Tool inventory
+1. Tool inputs are JSON objects validated for required fields, primitive types (`string`, `number`, `integer`, `boolean`, `array`), declared enums, and numeric constraints (`minimum`, `maximum`) by the registry prior to execution.
+2. Product, order, and address identifiers must originate from a prior catalog, account, or order result. Callers must not fabricate identifiers.
+3. Successful operations return the upstream API's structured payload. Failures preserve `success: false`, a stable `error` code, and a descriptive `message`.
+4. Registry-level failures (validation, authentication, state) include an `errorDetails` object with `code`, `message`, `retryable`, and, where applicable, `userActionRequired`.
 
-| Tool | Permission / state | Required input | Primary outcome |
-| --- | --- | --- | --- |
-| `login` | Public | `email`, `password` | Authenticated user profile; protected tools exposed |
-| `register` | Public | `name`, `email`, `password` | New user profile; auto-login |
-| `logout` | Authenticated | None | Session ended; protected tools hidden |
-| `get_account_info` | Public | None | Current auth status and user profile |
-| `search_products` | Public | `query` | Matching catalog products |
-| `get_product_details` | Public | `productId` | Product, specifications, price, and stock |
-| `filter_products` | Public | None | Filtered catalog products |
-| `sort_products` | Public | `sortBy` | Sorted catalog products |
-| `get_product_recommendations` | Public | None | Related or category recommendations |
-| `compare_products` | Public | `productIds` | Side-by-side products |
-| `check_product_stock` | Public | `productId` | Stock count and availability status |
-| `get_current_promotions` | Public | None | Active promotions and coupons |
-| `get_available_product_variants` | Public | `productId` | Derived presentation options and stock |
-| `get_shipping_estimate` | Public | `zipCode` | Shipping options and estimates |
-| `add_to_cart` | Authenticated | `productId` | Updated cart |
-| `get_cart` | Authenticated | None | Lines, quantities, prices, and totals |
-| `update_cart_quantity` | Authenticated | `productId`, `quantity` | Updated cart |
-| `remove_from_cart` | Authenticated | `productId` | Updated cart |
-| `clear_cart` | Authenticated | None | Empty updated cart |
-| `apply_coupon` | Authenticated | `code` | Recalculated cart |
-| `add_to_wishlist` | Authenticated | `productId` | Updated wishlist |
-| `remove_from_wishlist` | Authenticated | `productId` | Updated wishlist |
-| `get_wishlist` | Authenticated | None | Saved products |
-| `get_order_history` | Authenticated | None | Caller-owned orders |
-| `get_order_details` | Authenticated | `orderId` | Caller-owned order details |
-| `cancel_order` | Authenticated | `orderId` | Eligible-order cancellation result |
-| `create_order` | Transactional, cart populated | Address fields and `confirmDemoOrder: true` | Demo order; `DEMO_CARD` only |
-| `get_saved_addresses` | Authenticated | None | Caller-owned addresses |
-| `update_shipping_address` | Authenticated | Address fields | Created or updated address |
+## Tool Inventory
 
-## Error semantics
+| Tool | Permission | State Requirement | Required Input | Primary Outcome |
+|------|-----------|-------------------|----------------|-----------------|
+| `login` | Public | — | `email`, `password` | Authenticated user profile; protected tools become available |
+| `register` | Public | — | `name`, `email`, `password` | New user profile; automatic authentication |
+| `logout` | Authenticated | — | — | Session terminated; protected tools revoked |
+| `get_account_info` | Public | — | — | Current authentication status and user profile |
+| `search_products` | Public | — | `query` | Matching catalog products with identifiers |
+| `get_product_details` | Public | — | `productId` | Full product specifications, pricing, stock, and reviews |
+| `filter_products` | Public | — | — | Filtered catalog products by criteria |
+| `sort_products` | Public | — | `sortBy` | Sorted catalog products by chosen criterion |
+| `get_product_recommendations` | Public | — | — | Related or category-based product recommendations |
+| `compare_products` | Public | — | `productIds` | Side-by-side product comparison |
+| `check_product_stock` | Public | — | `productId` | Real-time stock count and availability status |
+| `get_current_promotions` | Public | — | — | Active promotions, featured products, and coupon codes |
+| `get_available_product_variants` | Public | — | `productId` | Available configuration and variant options |
+| `get_shipping_estimate` | Public | — | `zipCode` | Shipping options with rates and delivery estimates |
+| `add_to_cart` | Authenticated | — | `productId` | Updated cart with totals |
+| `get_cart` | Authenticated | — | — | Complete cart contents with line items and calculations |
+| `update_cart_quantity` | Authenticated | — | `productId`, `quantity` | Updated cart with recalculated totals |
+| `remove_from_cart` | Authenticated | — | `productId` | Updated cart with item removed |
+| `clear_cart` | Authenticated | — | — | Empty cart |
+| `apply_coupon` | Authenticated | — | `code` | Recalculated cart with coupon discount applied |
+| `add_to_wishlist` | Authenticated | — | `productId` | Updated wishlist |
+| `remove_from_wishlist` | Authenticated | — | `productId` | Updated wishlist |
+| `get_wishlist` | Authenticated | — | — | Complete wishlist contents |
+| `get_order_history` | Authenticated | — | — | Caller-owned order history |
+| `get_order_details` | Authenticated | — | `orderId` | Caller-owned order details with item breakdown |
+| `cancel_order` | Authenticated | — | `orderId` | Order cancellation result (PENDING/PROCESSING only) |
+| `create_order` | Transactional | Cart populated | Address fields, `confirmDemoOrder: true` | Demo order placed; `DEMO_CARD` payment only |
+| `get_saved_addresses` | Authenticated | — | — | Caller-owned shipping addresses |
+| `update_shipping_address` | Authenticated | — | Address fields | Created or updated shipping address |
 
-| Code | Meaning | Retryable |
-| --- | --- | --- |
-| `TOOL_NOT_FOUND` | Tool is not registered on the page | No |
-| `INVALID_INPUT` | Input is missing or violates the declared schema | No |
-| `AUTHENTICATION_REQUIRED` | A protected tool was called while signed out | No |
-| `CART_EMPTY` | A cart-populated tool was called without cart contents | No |
-| `EXECUTION_ERROR` | Browser/API transport execution failed | Yes |
+## Error Semantics
 
-API business errors, including stock, coupon, ownership, and order-state failures, are passed through in their API response. Callers should treat `success: false` as authoritative and avoid automatic retries unless the error is explicitly retryable.
+| Code | Condition | Retryable | User Action Required |
+|------|-----------|-----------|---------------------|
+| `TOOL_NOT_FOUND` | Requested tool is not registered on the current page | No | No |
+| `INVALID_INPUT` | Input violates the declared schema (missing field, wrong type, out of range) | No | Yes |
+| `AUTHENTICATION_REQUIRED` | A protected tool was invoked without an active session | No | Yes |
+| `CART_EMPTY` | A cart-dependent tool was invoked with no items in the cart | No | Yes |
+| `EXECUTION_ERROR` | Network or runtime failure during tool execution | Yes | No |
+
+API-level business errors — including stock availability, coupon validation, ownership verification, and order-state restrictions — are returned in the API response payload. Callers should treat `success: false` as authoritative and avoid automatic retries unless `errorDetails.retryable` is explicitly `true`.
