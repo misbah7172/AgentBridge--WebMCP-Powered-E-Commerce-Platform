@@ -9,12 +9,13 @@ import {
   List,
   Check,
   X,
-  ShoppingCart,
+  ShoppingBag,
   Star,
   Zap,
   Award,
   Plus,
   Search,
+  ExternalLink,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import '@/styles/compare.css';
@@ -33,18 +34,54 @@ export interface ProductItem {
   rating: number;
   reviewCount: number;
   stock: number;
-  images?: string[];
+  images?: string[] | string;
   description?: string;
   category?: {
     name: string;
     slug: string;
   };
-  specifications?: ProductSpec;
+  specifications?: ProductSpec | string;
 }
 
 interface CompareViewProps {
   initialProducts: ProductItem[];
   initialView?: 'auto' | 'parallel' | 'serial';
+}
+
+// Safely extract first image URL without throwing JSON syntax errors
+function getFirstImage(product: ProductItem): string {
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    return product.images[0];
+  }
+  if (typeof product.images === 'string') {
+    const trimmed = product.images.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+      } catch {
+        // Fall through
+      }
+    }
+    if (trimmed.startsWith('http')) return trimmed;
+  }
+  return 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800&q=80';
+}
+
+// Safely parse specifications object
+function getSpecs(product: ProductItem): Record<string, string> {
+  if (product.specifications && typeof product.specifications === 'object') {
+    return product.specifications as Record<string, string>;
+  }
+  if (typeof product.specifications === 'string') {
+    try {
+      const parsed = JSON.parse(product.specifications);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 export default function CompareView({ initialProducts, initialView = 'auto' }: CompareViewProps) {
@@ -73,21 +110,24 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
   // Identify Best Value (lowest price) & Top Rated
   const bestPriceId = useMemo(() => {
     if (products.length < 2) return null;
-    return [...products].sort((a, b) => a.price - b.price)[0]?.id;
+    return [...products].sort((a, b) => Number(a.price) - Number(b.price))[0]?.id;
   }, [products]);
 
   const topRatedId = useMemo(() => {
     if (products.length < 2) return null;
-    return [...products].sort((a, b) => b.rating - a.rating)[0]?.id;
+    return [...products].sort((a, b) => Number(b.rating) - Number(a.rating))[0]?.id;
   }, [products]);
 
-  // Aggregate all unique specification keys across all compared products
+  // Aggregate all unique specification keys across all compared products (excluding HexColor, which is rendered with Color)
   const allSpecKeys = useMemo(() => {
     const keys = new Set<string>();
     products.forEach((p) => {
-      if (p.specifications) {
-        Object.keys(p.specifications).forEach((k) => keys.add(k));
-      }
+      const specs = getSpecs(p);
+      Object.keys(specs).forEach((k) => {
+        if (k.toLowerCase() !== 'hexcolor') {
+          keys.add(k);
+        }
+      });
     });
     return Array.from(keys);
   }, [products]);
@@ -116,10 +156,9 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
     }
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/products?q=${encodeURIComponent(query)}&limit=5`);
+      const res = await fetch(`/api/products?q=${encodeURIComponent(query)}&limit=6`);
       const data = await res.json();
       if (data.success && Array.isArray(data.products)) {
-        // Exclude products already in comparison
         const existingIds = new Set(products.map((p) => p.id));
         setSearchResults(data.products.filter((p: ProductItem) => !existingIds.has(p.id)));
       }
@@ -139,25 +178,30 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
     router.replace(`/compare?ids=${newIds}&view=${viewMode}`, { scroll: false });
   };
 
-  // Helper to check if an attribute or spec differs across products
+  // Helper to check if an attribute differs across products
   const isDifferent = (getter: (p: ProductItem) => any) => {
     if (products.length < 2) return false;
-    const firstVal = String(getter(products[0]) || '').trim().toLowerCase();
-    return products.some((p) => String(getter(p) || '').trim().toLowerCase() !== firstVal);
+    const firstVal = String(getter(products[0]) ?? '').trim().toLowerCase();
+    return products.some((p) => String(getter(p) ?? '').trim().toLowerCase() !== firstVal);
   };
 
   return (
     <div className="compare-page">
-      {/* Header */}
+      {/* Editorial Header */}
       <div className="compare-header">
         <Link href="/products" className="compare-breadcrumb">
-          <ArrowLeft size={14} /> Back to Catalog
+          <ArrowLeft size={13} /> Atelier Archive
         </Link>
         <div className="compare-title-row">
-          <h1 className="compare-title">
-            Hardware & Spec Comparison
-            <span className="compare-badge-count">{products.length} models</span>
-          </h1>
+          <div>
+            <h1 className="compare-title">
+              Garment &amp; Atelier Comparison
+              <span className="compare-badge-count">{products.length} models</span>
+            </h1>
+            <p className="compare-subtitle">
+              Inspect tailoring cuts, certified fabrics, color palettes, and sizing across our collection.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -169,14 +213,14 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
             onClick={() => setViewMode('parallel')}
             title="Side-by-side parallel columns (ideal for 2-3 products)"
           >
-            <Columns size={15} /> Parallel View
+            <Columns size={14} /> Parallel View
           </button>
           <button
             className={`compare-toggle-btn ${viewMode === 'serial' ? 'active' : ''}`}
             onClick={() => setViewMode('serial')}
             title="Stacked serial cards (ideal for 4+ products or mobile)"
           >
-            <List size={15} /> Serial View
+            <List size={14} /> Serial View
           </button>
         </div>
 
@@ -195,40 +239,44 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
       {products.length === 0 ? (
         /* Empty State */
         <div className="compare-empty-box">
-          <div className="compare-empty-title">No products selected for comparison</div>
+          <div className="compare-empty-title">No Garments Selected</div>
           <p className="compare-empty-desc">
-            Ask the AI assistant to compare products (e.g. &quot;compare red vs blue silk blouses&quot; or &quot;compare men&apos;s pima tees&quot;), or explore our apparel comparisons below:
+            Explore our curated collections below or ask our AI stylist to compare pieces side-by-side.
           </p>
           <div className="compare-suggestions-row">
             <Link href="/products?category=womens-tops" className="compare-suggest-btn">
-              Explore Women&apos;s Tops
+              Women&apos;s Tops
             </Link>
             <Link href="/products?category=mens-tshirts" className="compare-suggest-btn">
-              Explore Men&apos;s Luxury Tees
+              Men&apos;s Luxury Tees
             </Link>
-            <Link href="/products?q=jeans" className="compare-suggest-btn">
-              Explore Tailored Denim
+            <Link href="/products?category=womens-denim" className="compare-suggest-btn">
+              Tailored Denim
             </Link>
           </div>
         </div>
       ) : viewMode === 'parallel' ? (
         /* ==========================================================================
-           PARALLEL VIEW (Side-by-side Columns)
+           PARALLEL VIEW (Side-by-side Synchronized Columns)
            ========================================================================== */
         <div className="compare-parallel-container">
           <table className="compare-table">
             <thead className="compare-table-head">
               <tr>
                 <th className="compare-attribute-col-header">
-                  <div>Attributes & Specs</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', textTransform: 'none' }}>
-                    Comparing {products.length} models side-by-side
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Garment Attributes
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px', textTransform: 'none' }}>
+                    Comparing {products.length} pieces
                   </div>
                 </th>
+
                 {products.map((p) => {
-                  const imageSrc = p.images && p.images.length > 0 ? p.images[0] : '/placeholder.png';
+                  const imageSrc = getFirstImage(p);
                   const isBestPrice = p.id === bestPriceId;
                   const isTopRated = p.id === topRatedId;
+                  const price = Number(p.price || 0);
 
                   return (
                     <th key={p.id} className="compare-product-col-header">
@@ -265,10 +313,10 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                           {p.name}
                         </Link>
 
-                        <div className="compare-price-box">
-                          <span className="compare-price-final">${p.price.toFixed(2)}</span>
-                          {p.discountPercent && p.discountPercent > 0 && (
-                            <span className="compare-price-save">{p.discountPercent}% OFF</span>
+                        <div className="compare-price-row">
+                          <span className="compare-price-final">${price.toFixed(2)}</span>
+                          {Boolean(p.discountPercent && p.discountPercent > 0) && (
+                            <span className="compare-discount-badge">{p.discountPercent}% OFF</span>
                           )}
                         </div>
 
@@ -277,8 +325,8 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                           onClick={() => handleAddToCart(p.id)}
                           disabled={p.stock <= 0 || addingId === p.id}
                         >
-                          <ShoppingCart size={14} />
-                          {addingId === p.id ? 'Adding...' : p.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                          <ShoppingBag size={14} />
+                          {addingId === p.id ? 'Adding...' : p.stock > 0 ? 'Add to Cart' : 'Sold Out'}
                         </button>
                       </div>
                     </th>
@@ -287,27 +335,27 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
               </tr>
             </thead>
             <tbody>
-              {/* --- Overview Section --- */}
+              {/* --- Editorial Overview --- */}
               <tr className="compare-section-header">
-                <td colSpan={products.length + 1}>Overview & Key Metrics</td>
+                <td colSpan={products.length + 1}>Overview &amp; Reviews</td>
               </tr>
 
               <tr className={`compare-row ${highlightDiffs && isDifferent((p) => p.rating) ? 'diff-highlight' : ''}`}>
-                <td className="compare-attr-label">Rating & Reviews</td>
+                <td className="compare-attr-label">Rating &amp; Reviews</td>
                 {products.map((p) => (
                   <td key={p.id}>
-                    <span style={{ color: '#fbbf24', fontWeight: 700 }}>★ {p.rating.toFixed(1)}</span>{' '}
+                    <span style={{ color: '#fbbf24', fontWeight: 700 }}>★ {Number(p.rating || 0).toFixed(1)}</span>{' '}
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      ({p.reviewCount} reviews)
+                      ({p.reviewCount || 0} reviews)
                     </span>
                   </td>
                 ))}
               </tr>
 
               <tr className={`compare-row ${highlightDiffs && isDifferent((p) => p.category?.name) ? 'diff-highlight' : ''}`}>
-                <td className="compare-attr-label">Category</td>
+                <td className="compare-attr-label">Department</td>
                 {products.map((p) => (
-                  <td key={p.id}>{p.category?.name || 'Hardware'}</td>
+                  <td key={p.id}>{p.category?.name || 'Luxury Apparel'}</td>
                 ))}
               </tr>
 
@@ -316,35 +364,69 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                 {products.map((p) => (
                   <td key={p.id}>
                     {p.stock > 0 ? (
-                      <span style={{ color: '#34d399', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <Check size={14} /> In Stock ({p.stock} units)
                       </span>
                     ) : (
-                      <span style={{ color: '#f87171', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <X size={14} /> Out of Stock
+                      <span style={{ color: 'var(--danger)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <X size={14} /> Sold Out
                       </span>
                     )}
                   </td>
                 ))}
               </tr>
 
-              {/* --- Technical Specifications Section --- */}
+              {/* --- Garment Specifications Section --- */}
               {allSpecKeys.length > 0 && (
                 <>
                   <tr className="compare-section-header">
-                    <td colSpan={products.length + 1}>Technical Specifications</td>
+                    <td colSpan={products.length + 1}>Garment Specifications &amp; Sizing</td>
                   </tr>
 
                   {allSpecKeys.map((key) => {
-                    const diff = isDifferent((p) => p.specifications?.[key]);
+                    const diff = isDifferent((p) => getSpecs(p)[key]);
                     return (
                       <tr key={key} className={`compare-row ${highlightDiffs && diff ? 'diff-highlight' : ''}`}>
                         <td className="compare-attr-label">{key}</td>
-                        {products.map((p) => (
-                          <td key={p.id} style={{ color: p.specifications?.[key] ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                            {p.specifications?.[key] || '—'}
-                          </td>
-                        ))}
+                        {products.map((p) => {
+                          const specs = getSpecs(p);
+                          const val = specs[key];
+
+                          // Custom rendering for Color with swatch circle
+                          if (key.toLowerCase() === 'color' && val) {
+                            const hexColor = specs['HexColor'] || specs['hexColor'] || '#111111';
+                            return (
+                              <td key={p.id}>
+                                <span className="compare-color-val">
+                                  <span className="compare-color-dot" style={{ backgroundColor: hexColor }} />
+                                  <span>{val}</span>
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          // Custom rendering for Available Sizes as chips
+                          if (key.toLowerCase() === 'available sizes' && val) {
+                            const sizeList = val.split(',').map((s) => s.trim()).filter(Boolean);
+                            return (
+                              <td key={p.id}>
+                                <div className="compare-size-chips">
+                                  {sizeList.map((size) => (
+                                    <span key={size} className="compare-size-chip">
+                                      {size}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                            );
+                          }
+
+                          return (
+                            <td key={p.id} style={{ color: val ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                              {val || '—'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}
@@ -355,13 +437,15 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
         </div>
       ) : (
         /* ==========================================================================
-           SERIAL VIEW (Stacked Cards)
+           SERIAL VIEW (Stacked Cards with Balanced Proportions)
            ========================================================================== */
         <div className="compare-serial-container">
           {products.map((p, idx) => {
-            const imageSrc = p.images && p.images.length > 0 ? p.images[0] : '/placeholder.png';
+            const imageSrc = getFirstImage(p);
             const isBestPrice = p.id === bestPriceId;
             const isTopRated = p.id === topRatedId;
+            const specs = getSpecs(p);
+            const price = Number(p.price || 0);
 
             return (
               <div key={p.id} className="compare-serial-card">
@@ -383,16 +467,16 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                     )}
                   </div>
                   <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                    ★ <strong style={{ color: '#fbbf24' }}>{p.rating.toFixed(1)}</strong> ({p.reviewCount} customer reviews)
+                    ★ <strong style={{ color: '#fbbf24' }}>{Number(p.rating || 0).toFixed(1)}</strong> ({p.reviewCount || 0} reviews)
                   </div>
                   <div>
                     {p.stock > 0 ? (
-                      <span style={{ color: '#34d399', fontSize: '0.8125rem', fontWeight: 600 }}>
-                        ✓ In Stock ({p.stock} available)
+                      <span style={{ color: 'var(--success)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        ✓ In Stock ({p.stock} units)
                       </span>
                     ) : (
-                      <span style={{ color: '#f87171', fontSize: '0.8125rem', fontWeight: 600 }}>
-                        ✗ Currently Out of Stock
+                      <span style={{ color: 'var(--danger)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        ✗ Sold Out
                       </span>
                     )}
                   </div>
@@ -401,33 +485,51 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                 {/* Details & Specifications Column */}
                 <div className="compare-serial-details">
                   <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--brand-accent)', textTransform: 'uppercase' }}>
-                      Model #{idx + 1} • {p.brand}
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      Edition #{idx + 1} • {p.brand}
                     </span>
-                    <Link href={`/products/${p.slug || p.id}`} className="compare-serial-title" style={{ display: 'block', marginTop: '2px' }}>
+                    <Link href={`/products/${p.slug || p.id}`} className="compare-serial-title" style={{ display: 'block', marginTop: '4px' }}>
                       {p.name}
                     </Link>
                   </div>
 
                   {p.description && (
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                       {p.description}
                     </p>
                   )}
 
-                  {/* Key Specifications Grid */}
-                  {p.specifications && Object.keys(p.specifications).length > 0 && (
+                  {/* Specifications Grid */}
+                  {Object.keys(specs).length > 0 && (
                     <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Technical Specifications
+                      <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                        Garment Specifications
                       </div>
                       <div className="compare-specs-grid">
-                        {Object.entries(p.specifications).map(([k, v]) => (
-                          <div key={k} className="compare-spec-item">
-                            <div className="compare-spec-label">{k}</div>
-                            <div className="compare-spec-val">{v}</div>
-                          </div>
-                        ))}
+                        {Object.entries(specs)
+                          .filter(([k]) => k.toLowerCase() !== 'hexcolor')
+                          .map(([k, v]) => (
+                            <div key={k} className="compare-spec-item">
+                              <div className="compare-spec-label">{k}</div>
+                              <div className="compare-spec-val">
+                                {k.toLowerCase() === 'color' ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <span
+                                      style={{
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: '50%',
+                                        backgroundColor: specs['HexColor'] || specs['hexColor'] || '#111',
+                                      }}
+                                    />
+                                    {v}
+                                  </span>
+                                ) : (
+                                  v
+                                )}
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -436,10 +538,14 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                 {/* Pricing & Actions Column */}
                 <div className="compare-serial-actions">
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Price</div>
-                    <div className="compare-price-final">${p.price.toFixed(2)}</div>
-                    {p.discountPercent && p.discountPercent > 0 && (
-                      <div style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 700, marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                      Price
+                    </div>
+                    <div className="compare-price-final" style={{ fontSize: '1.5rem' }}>
+                      ${price.toFixed(2)}
+                    </div>
+                    {Boolean(p.discountPercent && p.discountPercent > 0) && (
+                      <div style={{ color: 'var(--success)', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>
                         Save {p.discountPercent}%
                       </div>
                     )}
@@ -450,24 +556,26 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                     onClick={() => handleAddToCart(p.id)}
                     disabled={p.stock <= 0 || addingId === p.id}
                   >
-                    <ShoppingCart size={14} />
-                    {addingId === p.id ? 'Adding...' : p.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                    <ShoppingBag size={14} />
+                    {addingId === p.id ? 'Adding...' : p.stock > 0 ? 'Add to Cart' : 'Sold Out'}
                   </button>
 
                   <Link
                     href={`/products/${p.slug || p.id}`}
                     style={{
-                      display: 'block',
-                      textAlign: 'center',
-                      padding: '8px',
-                      fontSize: '0.8125rem',
-                      color: 'var(--brand-primary)',
-                      fontWeight: 600,
-                      border: '1px solid var(--border-subtle)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                      border: '1px solid var(--border-medium)',
+                      padding: '8px 12px',
                       borderRadius: 'var(--radius-sm)',
                     }}
                   >
-                    View Full Details
+                    <ExternalLink size={12} /> View Full Piece
                   </Link>
 
                   <button
@@ -479,6 +587,7 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
                       fontSize: '0.75rem',
                       cursor: 'pointer',
                       textAlign: 'center',
+                      marginTop: 'auto',
                     }}
                   >
                     Remove from comparison
@@ -490,72 +599,88 @@ export default function CompareView({ initialProducts, initialView = 'auto' }: C
         </div>
       )}
 
-      {/* Add Product Selector Bar */}
-      <div className="compare-add-bar">
-        <Search size={18} style={{ color: 'var(--text-muted)' }} />
-        <input
-          type="text"
-          className="compare-add-input"
-          placeholder="Search and add another product to this comparison..."
-          value={searchQuery}
-          onChange={(e) => handleSearchAdd(e.target.value)}
-        />
-        {isSearching && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Searching...</span>}
-      </div>
-
-      {/* Search results popup */}
-      {searchResults.length > 0 && (
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-medium)',
-            borderRadius: 'var(--radius-md)',
-            marginTop: '8px',
-            padding: '8px',
-            boxShadow: 'var(--shadow-lg)',
-          }}
-        >
-          {searchResults.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => handleSelectProductToAdd(item)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-elevated)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <div>
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>{item.name}</span>{' '}
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({item.brand})</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, color: 'var(--brand-primary)', fontSize: '0.875rem' }}>
-                  ${item.price.toFixed(2)}
-                </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.75rem',
-                    color: 'var(--brand-accent)',
-                    fontWeight: 600,
-                  }}
-                >
-                  <Plus size={12} /> Add
-                </span>
-              </div>
-            </div>
-          ))}
+      {/* Add Product Selector Section */}
+      <div className="compare-add-section">
+        <div className="compare-add-header">
+          <div className="compare-add-title">Add Another Piece to Comparison</div>
+          <div className="compare-add-desc">
+            Search our collection by color, garment type, or brand to compare side-by-side.
+          </div>
         </div>
-      )}
+
+        <div className="compare-add-bar">
+          <Search size={16} style={{ color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            className="compare-add-input"
+            placeholder="Search e.g. 'Silk Blouse', 'Pima Crewneck', 'Raw Indigo Jeans'..."
+            value={searchQuery}
+            onChange={(e) => handleSearchAdd(e.target.value)}
+          />
+          {isSearching && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Searching...</span>}
+        </div>
+
+        {/* Search Results Dropdown */}
+        {searchResults.length > 0 && (
+          <div className="compare-search-dropdown">
+            {searchResults.map((item) => {
+              const img = getFirstImage(item);
+              const price = Number(item.price || 0);
+
+              return (
+                <div
+                  key={item.id}
+                  className="compare-search-item"
+                  onClick={() => handleSelectProductToAdd(item)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                      src={img}
+                      alt={item.name}
+                      style={{
+                        width: '36px',
+                        height: '48px',
+                        objectFit: 'cover',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                        {item.name}
+                      </div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                        {item.brand} • {item.category?.name || 'Apparel'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                      ${price.toFixed(2)}
+                    </span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        border: '1px solid var(--border-medium)',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      <Plus size={12} /> Add
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
