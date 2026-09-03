@@ -24,11 +24,17 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
-  const images = Array.isArray(product.images)
-    ? product.images
-    : typeof product.images === 'string'
-    ? JSON.parse(product.images)
-    : [];
+  let images: string[] = [];
+  if (Array.isArray(product.images)) {
+    images = product.images;
+  } else if (typeof product.images === 'string') {
+    try {
+      const parsed = JSON.parse(product.images);
+      images = Array.isArray(parsed) ? parsed : [product.images];
+    } catch {
+      images = product.images.trim() ? [product.images] : [];
+    }
+  }
 
   const [selectedImage, setSelectedImage] = useState<string>(images[0] || '');
   const [quantity, setQuantity] = useState(1);
@@ -36,7 +42,16 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const [isAdding, setIsAdding] = useState(false);
 
   const inWishlist = isInWishlist(product.id);
-  const specs = typeof product.specifications === 'string' ? JSON.parse(product.specifications) : product.specifications || {};
+  let specs: Record<string, any> = {};
+  if (typeof product.specifications === 'string') {
+    try {
+      specs = JSON.parse(product.specifications) || {};
+    } catch {
+      specs = {};
+    }
+  } else if (product.specifications && typeof product.specifications === 'object') {
+    specs = product.specifications;
+  }
 
   const discountedPrice = product.discountPercent > 0
     ? product.price * (1 - product.discountPercent / 100)

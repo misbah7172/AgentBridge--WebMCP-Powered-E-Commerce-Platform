@@ -1,6 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import { getPromotions, getCategories, getRecommendations } from '@/lib/services/productService';
+import {
+  getPromotions,
+  getCategories,
+  DEFAULT_CATEGORIES,
+  FALLBACK_FEATURED_PRODUCTS,
+} from '@/lib/services/productService';
 import ProductCard from '@/components/products/ProductCard';
 import {
   ArrowRight,
@@ -22,14 +27,35 @@ const COLOR_CURATION = [
 ];
 
 export default async function HomePage() {
-  const [promotions, categoriesData] = await Promise.all([
-    getPromotions(),
-    getCategories(),
-  ]);
+  let categories: any[] = DEFAULT_CATEGORIES;
+  let featured: any[] = FALLBACK_FEATURED_PRODUCTS;
+  let discounted: any[] = [];
 
-  const categories = categoriesData.categories || [];
-  const featured = promotions.featuredProducts || [];
-  const discounted = promotions.discountedProducts || [];
+  try {
+    const [promotions, categoriesData] = await Promise.all([
+      getPromotions().catch(() => ({
+        success: false,
+        featuredProducts: FALLBACK_FEATURED_PRODUCTS,
+        discountedProducts: [],
+      })),
+      getCategories().catch(() => ({
+        success: false,
+        categories: DEFAULT_CATEGORIES,
+      })),
+    ]);
+
+    if (categoriesData && categoriesData.categories && categoriesData.categories.length > 0) {
+      categories = categoriesData.categories;
+    }
+    if (promotions && promotions.featuredProducts && promotions.featuredProducts.length > 0) {
+      featured = promotions.featuredProducts;
+    }
+    if (promotions && promotions.discountedProducts) {
+      discounted = promotions.discountedProducts;
+    }
+  } catch (err) {
+    console.warn('HomePage server data fetch fallback activated:', err);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '80px', paddingBottom: '96px' }}>

@@ -1,5 +1,10 @@
 import React from 'react';
-import { getProducts, getCategories } from '@/lib/services/productService';
+import {
+  getProducts,
+  getCategories,
+  DEFAULT_CATEGORIES,
+  FALLBACK_FEATURED_PRODUCTS,
+} from '@/lib/services/productService';
 import ProductCard from '@/components/products/ProductCard';
 import FilterSidebar from '@/components/products/FilterSidebar';
 import Link from 'next/link';
@@ -38,27 +43,48 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const sort = searchParams.sort || 'popularity';
   const page = searchParams.page ? Number(searchParams.page) : 1;
 
-  const [productsData, categoriesData] = await Promise.all([
-    getProducts({
-      query,
-      category,
-      brand,
-      color,
-      minPrice,
-      maxPrice,
-      minRating,
-      inStockOnly,
-      isFeatured,
-      isPromoted,
-      sort,
-      page,
-      limit: 12,
-    }),
-    getCategories(),
-  ]);
+  let products: any[] = [];
+  let total = 0;
+  let totalPages = 1;
+  let categories: any[] = DEFAULT_CATEGORIES;
 
-  const { products, total, totalPages } = productsData;
-  const categories = categoriesData.categories || [];
+  try {
+    const [productsData, categoriesData] = await Promise.all([
+      getProducts({
+        query,
+        category,
+        brand,
+        color,
+        minPrice,
+        maxPrice,
+        minRating,
+        inStockOnly,
+        isFeatured,
+        isPromoted,
+        sort,
+        page,
+        limit: 12,
+      }).catch(() => ({
+        success: false,
+        products: FALLBACK_FEATURED_PRODUCTS,
+        total: FALLBACK_FEATURED_PRODUCTS.length,
+        totalPages: 1,
+      })),
+      getCategories().catch(() => ({
+        success: false,
+        categories: DEFAULT_CATEGORIES,
+      })),
+    ]);
+
+    products = productsData?.products || FALLBACK_FEATURED_PRODUCTS;
+    total = productsData?.total ?? products.length;
+    totalPages = productsData?.totalPages ?? 1;
+    categories = categoriesData?.categories || DEFAULT_CATEGORIES;
+  } catch (err) {
+    console.warn('ProductsPage fallback activated:', err);
+    products = FALLBACK_FEATURED_PRODUCTS;
+    total = FALLBACK_FEATURED_PRODUCTS.length;
+  }
 
   const getSortUrl = (newSort: string) => {
     const params = new URLSearchParams();

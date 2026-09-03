@@ -32,15 +32,28 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const inWishlist = isInWishlist(product.id);
 
-  const images = Array.isArray(product.images)
-    ? product.images
-    : typeof product.images === 'string'
-    ? JSON.parse(product.images)
-    : [];
+  let images: string[] = [];
+  if (Array.isArray(product.images)) {
+    images = product.images;
+  } else if (typeof product.images === 'string') {
+    try {
+      const parsed = JSON.parse(product.images);
+      images = Array.isArray(parsed) ? parsed : [product.images];
+    } catch {
+      images = product.images.trim() ? [product.images] : [];
+    }
+  }
 
-  const specs = typeof product.specifications === 'string'
-    ? JSON.parse(product.specifications)
-    : product.specifications || {};
+  let specs: Record<string, any> = {};
+  if (typeof product.specifications === 'string') {
+    try {
+      specs = JSON.parse(product.specifications) || {};
+    } catch {
+      specs = {};
+    }
+  } else if (product.specifications && typeof product.specifications === 'object') {
+    specs = product.specifications;
+  }
 
   const color = specs['Color'] || '';
   const hexColor = specs['HexColor'] || '#111111';
