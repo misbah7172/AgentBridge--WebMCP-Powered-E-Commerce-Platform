@@ -14,6 +14,7 @@ import {
   LogOut,
   Package,
   Layers,
+  Columns,
   ChevronDown,
   Cpu,
   ArrowRight,
@@ -262,6 +263,23 @@ export default function Navbar() {
           >
             <Layers size={16} />
             <span>Catalog</span>
+          </Link>
+
+          {/* Compare Link */}
+          <Link
+            href="/compare"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            <Columns size={16} />
+            <span>Compare</span>
           </Link>
 
           {/* Wishlist Link */}

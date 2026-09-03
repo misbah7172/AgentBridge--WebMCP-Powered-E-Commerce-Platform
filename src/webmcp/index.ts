@@ -40,10 +40,17 @@ import {
   logoutTool,
   getAccountInfoTool,
 } from './tools/authTools';
+import {
+  navigateToPageTool,
+  viewProductPageTool,
+  viewComparisonPageTool,
+} from './tools/navigationTools';
 
 export const webmcpTools = [
   // Auth
   loginTool, registerTool, logoutTool, getAccountInfoTool,
+  // Navigation
+  navigateToPageTool, viewProductPageTool, viewComparisonPageTool,
   // Products
   searchProductsTool, getProductDetailsTool, filterProductsTool, sortProductsTool,
   getProductRecommendationsTool, compareProductsTool, checkProductStockTool,

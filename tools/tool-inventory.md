@@ -1,6 +1,6 @@
 # WebMCP Tool Inventory
 
-This document provides a machine-readable inventory of all 29 WebMCP tools registered by AgentBridge.
+This document provides a machine-readable inventory of all 32 WebMCP tools registered by AgentBridge.
 
 ---
 
@@ -325,3 +325,39 @@ This document provides a machine-readable inventory of all 29 WebMCP tools regis
 - **State requirements**: Must be authenticated
 - **Side effects**: Creates or updates address record
 - **Underlying API**: `POST /api/addresses` or `PUT /api/addresses`
+
+---
+
+## Navigation Tools
+
+### `navigate_to_page`
+- **Purpose**: Navigate the user's browser to an allowed store page with proper authorization, state validation, and flow controls
+- **Permission**: PUBLIC (enforces auth/cart gates for protected destinations)
+- **Required input**: `page` ('home' | 'products' | 'product_detail' | 'compare' | 'cart' | 'checkout' | 'account' | 'orders' | 'wishlist')
+- **Optional input**: `productId` (for product_detail), `productIds` (for compare), `category`, `searchQuery`, `view` ('auto' | 'parallel' | 'serial')
+- **Output**: `{ success: true, navigatedTo: url, page, message }`
+- **Errors**: INVALID_INPUT (unlisted page or missing productId), AUTHENTICATION_REQUIRED (checkout/account/orders/wishlist without login), CART_EMPTY (checkout with empty cart)
+- **State requirements**: Destination-dependent
+- **Side effects**: Dispatches `webmcp-navigation` browser event; triggers Next.js client-side navigation
+- **Underlying API**: Browser navigation / Next.js client router
+
+### `view_product_page`
+- **Purpose**: Directly navigate the user's browser to a specific product detail page to display photos, specifications, and customer reviews
+- **Permission**: PUBLIC
+- **Required input**: `productId` (string)
+- **Output**: `{ success: true, navigatedTo: url, productId, message }`
+- **Errors**: INVALID_INPUT (missing or invalid productId)
+- **State requirements**: None
+- **Side effects**: Dispatches `webmcp-navigation` browser event; loads `/products/{productId}`
+- **Underlying API**: Browser navigation / Next.js client router
+
+### `view_comparison_page`
+- **Purpose**: Directly navigate the user's browser to the hardware comparison page to compare 2 to 4 products side-by-side (parallel) or stacked (serial)
+- **Permission**: PUBLIC
+- **Required input**: `productIds` (array of strings, min 2 products)
+- **Optional input**: `view` ('auto' | 'parallel' | 'serial')
+- **Output**: `{ success: true, navigatedTo: url, productCount, view, message }`
+- **Errors**: INVALID_INPUT (fewer than 2 product IDs)
+- **State requirements**: None
+- **Side effects**: Dispatches `webmcp-navigation` browser event; loads `/compare?ids=...&view=...`
+- **Underlying API**: Browser navigation / Next.js client router

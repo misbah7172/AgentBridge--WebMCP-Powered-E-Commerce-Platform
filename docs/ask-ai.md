@@ -168,16 +168,39 @@ User: "Place my order to 123 Main St, Springfield"
   → Gemini: "Order ORD-123456 placed successfully!"
 ```
 
+### Navigation & Viewing Flow (e.g., "Show me this laptop")
+```
+User: "Open the product details for the TechPro Laptop 15"
+  → Gemini calls search_products({query: "TechPro Laptop 15"})
+  → Result returns matching product id "techpro-laptop-15"
+  → Gemini calls view_product_page({productId: "techpro-laptop-15"})
+  → Tool dispatches "webmcp-navigation" event to browser
+  → WebMCPNavigationListener calls router.push("/products/techpro-laptop-15")
+  → Page navigates immediately; Ask AI chat stays open and active
+  → Gemini: "I've opened the product page for the TechPro Laptop 15."
+```
+
+### Visual Comparison Flow (e.g., "Compare these two phones")
+```
+User: "Compare the CyberPhone 15 Pro and Galaxy Ultra"
+  → Gemini calls search_products({query: "CyberPhone"}) and finds ID "prod-phone-1"
+  → Gemini calls search_products({query: "Galaxy"}) and finds ID "prod-phone-2"
+  → Gemini calls view_comparison_page({productIds: ["prod-phone-1", "prod-phone-2"], view: "parallel"})
+  → WebMCPNavigationListener navigates browser to /compare?ids=prod-phone-1,prod-phone-2&view=parallel
+  → Website renders the interactive Parallel side-by-side comparison page
+  → Gemini: "I've opened the side-by-side comparison page for you on screen."
+```
+
 ## State Awareness
 
 The Ask AI panel reflects the same state transitions as the full WebMCP system:
 
 | State | Available Tool Count | Key Changes |
 |-------|---------------------|-------------|
-| Guest | ~14 public tools | No cart, wishlist, or order tools |
-| Logged in, empty cart | ~28 tools | Cart/order tools available except `create_order` |
-| Logged in, populated cart | 29 tools | `create_order` now available |
-| After checkout | ~28 tools | Cart cleared, `create_order` unavailable again |
+| Guest | ~17 public tools | Public catalog, navigation, and auth tools only |
+| Logged in, empty cart | ~31 tools | Cart/order tools available except `create_order` |
+| Logged in, populated cart | 32 tools | All tools including `create_order` active |
+| After checkout | ~31 tools | Cart cleared, `create_order` unavailable again |
 
 ## Security
 

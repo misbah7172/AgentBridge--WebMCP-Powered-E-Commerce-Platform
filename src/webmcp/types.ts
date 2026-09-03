@@ -27,7 +27,7 @@ export interface WebMCPTool<TInput = any, TOutput = any> {
   inputSchema: JSONSchema;
   permission: ToolPermission;
   availability?: ToolAvailability;
-  category: 'Products' | 'Cart' | 'Wishlist' | 'Orders' | 'Promotions' | 'Shipping' | 'Account' | 'Auth';
+  category: 'Products' | 'Cart' | 'Wishlist' | 'Orders' | 'Promotions' | 'Shipping' | 'Account' | 'Auth' | 'Navigation';
   execute: (input: TInput) => Promise<TOutput>;
 }
 

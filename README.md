@@ -38,7 +38,7 @@ AgentBridge is a full-stack e-commerce application that implements browser-nativ
 
 ## 1. Overview
 
-AgentBridge is a Next.js 14 storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **29 WebMCP tools** on `document.modelContext`, enabling AI agents operating within the browser to search products, manage carts, handle wishlists, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
+AgentBridge is a Next.js 14 storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **32 WebMCP tools** on `document.modelContext`, enabling AI agents operating within the browser to search products, compare products side-by-side or serially, manage carts, handle wishlists, navigate pages, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
 
 Human shoppers and AI agents share identical business logic, database, authentication, and authorization. No separate API surface or external adapter exists.
 
@@ -68,7 +68,7 @@ For detailed specification alignment, see [docs/webmcp.md](docs/webmcp.md).
                     ┌──────────▼──────────┐
                     │   WebMCP Registry   │
                     │  ┌───────────────┐  │
-                    │  │ 29 Tools      │  │
+                    │  │ 32 Tools      │  │
                     │  │ Schema Valid. │  │
                     │  │ State Gating  │  │
                     │  │ Error Struct. │  │
@@ -101,15 +101,16 @@ Both entry points — the React UI and the WebMCP tool layer — converge on the
 2. The `WebMCPRegistry` registers public tools on `document.modelContext`. Protected tools are registered but marked as requiring authentication.
 3. The agent discovers available tools via `document.modelContext.getTools()`, receiving each tool's name, description, schema, and current availability status.
 4. The agent invokes a tool via `document.modelContext.executeTool(name, input)`. The registry validates the input, checks auth and state requirements, then executes the tool.
-5. The tool calls the same-origin API via `fetch()`. The server validates the request, executes the business logic, and returns a structured response.
+5. The tool calls the same-origin API via `fetch()` or performs validated in-browser navigation. The server validates the request, executes the business logic, and returns a structured response.
 6. Cart and authentication state changes propagate to both the WebMCP registry (updating tool availability) and the React UI (updating visual state).
 
 ## 7. Tool Inventory
 
-AgentBridge registers **29 tools** across six categories:
+AgentBridge registers **32 tools** across seven categories:
 
 | Category | Tools | Permission |
 |----------|-------|-----------|
+| **Navigation** | `navigate_to_page`, `view_product_page`, `view_comparison_page` | Public |
 | **Authentication** | `login`, `register`, `logout`, `get_account_info` | Public / Authenticated |
 | **Product Catalog** | `search_products`, `get_product_details`, `filter_products`, `sort_products`, `get_product_recommendations`, `compare_products`, `check_product_stock`, `get_current_promotions`, `get_available_product_variants` | Public |
 | **Cart Management** | `add_to_cart`, `get_cart`, `update_cart_quantity`, `remove_from_cart`, `clear_cart`, `apply_coupon` | Authenticated |
@@ -175,7 +176,7 @@ Testing is organized in four tiers:
 
 | Tier | Scope | Runner | Count |
 |------|-------|--------|-------|
-| **Deterministic** | Registry, schemas, contracts, state journeys, failure modes | `npm test` (Vitest) | 57 tests |
+| **Deterministic** | Registry, schemas, contracts, navigation, state journeys, failure modes | `npm test` (Vitest) | 67 tests |
 | **Integration** | End-to-end service execution against database | `npm run test:webmcp:integration` | 23 tests |
 | **Browser E2E** | UI flows + `document.modelContext` verification | `npm run test:webmcp:e2e` (Playwright) | 7 specs |
 | **LLM Evaluation** | Model planning accuracy (tool selection, arguments, chains) | `npm run eval:webmcp:llm` | 16 cases |
@@ -208,8 +209,8 @@ See [docs/webmcp-browser-verification.md](docs/webmcp-browser-verification.md) f
 
 | Metric | Result |
 |--------|--------|
-| Registered tools | 29 |
-| Deterministic tests | 57 passed |
+| Registered tools | 32 |
+| Deterministic tests | 67 passed |
 | Integration tests | 23 passed |
 | Evaluation dataset | 16/16 schema valid |
 | Browser E2E | 7 specs |

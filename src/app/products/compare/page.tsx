@@ -11,7 +11,7 @@ interface ComparePageProps {
   };
 }
 
-export default async function ComparePage({ searchParams }: ComparePageProps) {
+export default async function ProductsComparePage({ searchParams }: ComparePageProps) {
   let ids = searchParams.ids ? searchParams.ids.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
   if (ids.length === 0) {

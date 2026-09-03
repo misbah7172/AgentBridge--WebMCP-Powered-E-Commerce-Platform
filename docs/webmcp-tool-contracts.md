@@ -1,6 +1,6 @@
 # WebMCP Tool Contracts
 
-This document defines the behavioral contracts that govern all 29 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 57 deterministic tests.
+This document defines the behavioral contracts that govern all 32 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 67 deterministic tests.
 
 ## Contract Rules
 
@@ -17,6 +17,9 @@ This document defines the behavioral contracts that govern all 29 WebMCP tools r
 | `register` | Public | — | `name`, `email`, `password` | New user profile; automatic authentication |
 | `logout` | Authenticated | — | — | Session terminated; protected tools revoked |
 | `get_account_info` | Public | — | — | Current authentication status and user profile |
+| `navigate_to_page` | Public | Destination-dependent | `page` | Browser navigated to safe internal route (`/`, `/products`, `/compare`, `/cart`, `/checkout`, `/account`) |
+| `view_product_page` | Public | — | `productId` | Browser opened directly to `/products/{productId}` |
+| `view_comparison_page` | Public | — | `productIds` | Browser opened directly to `/compare` in parallel or serial mode |
 | `search_products` | Public | — | `query` | Matching catalog products with identifiers |
 | `get_product_details` | Public | — | `productId` | Full product specifications, pricing, stock, and reviews |
 | `filter_products` | Public | — | — | Filtered catalog products by criteria |

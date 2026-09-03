@@ -2,21 +2,22 @@
 
 ## Overview
 
-AgentBridge testing validates that all 29 WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, produce structured error responses, and complete multi-step agent journeys. The test infrastructure is organized in four tiers, progressing from fast deterministic validation to provider-backed evaluation.
+AgentBridge testing validates that all 32 WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, produce structured error responses, and complete multi-step agent journeys. The test infrastructure is organized in four tiers, progressing from fast deterministic validation to provider-backed evaluation.
 
 ## Tier 1: Deterministic Tool Tests
 
 **Location:** `tests/webmcp/tools/`
 **Runner:** `npm test` (Vitest)
-**Count:** 57 tests across 7 files
+**Count:** 67 tests across 8 files
 
 ### Test Files
 
 | File | Tests | Scope |
 |------|-------|-------|
-| `registry.test.ts` | 7 | Unknown tool errors, required parameter validation, type checking, auth barriers, direct execution tracing, 29-tool registration and state gating, checkout policy |
+| `registry.test.ts` | 7 | Unknown tool errors, required parameter validation, type checking, auth barriers, direct execution tracing, 32-tool registration and state gating, checkout policy |
 | `requestContracts.test.ts` | 8 | Every tool's API endpoint, HTTP method, query parameter encoding, and request body validation |
 | `authTools.test.ts` | 12 | Auth tool request contracts (4), response format validation (4), registry integration and validation (4) |
+| `navigationTools.test.ts` | 10 | Navigation contracts (3), destination boundaries, auth/cart barriers, product detail navigation, compare URL formatting, CustomEvent dispatching |
 | `stateJourneys.test.ts` | 5 | Journey A (search→inspect→add→view), Journey B (search→compare→add→update→view), Journey C (auth barrier→login→retry), Journey D (search→add→verify→checkout), full state transition cycle |
 | `failureModes.test.ts` | 18 | Wrong execution order (2), wrong arguments including negative/zero/non-integer quantities (6), missing required data (4), unknown tool (1), network failures (2), mid-chain failures (3) |
 | `checkoutPolicy.test.ts` | 3 | Demo payment method validation, order confirmation requirement |
@@ -77,7 +78,7 @@ Measures AI agent planning accuracy across tool selection, argument generation, 
 ## Execution Summary
 
 ```bash
-npm test                              # Tier 1: 57 deterministic tests
+npm test                              # Tier 1: 67 deterministic tests
 npm run test:webmcp:integration       # Tier 2: 23 integration tests
 npm run test:webmcp:e2e              # Tier 3: 7 browser E2E specs
 npm run eval:webmcp                   # Schema validation (16 cases)

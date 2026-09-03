@@ -51,7 +51,7 @@ describe('WebMCP registry deterministic contracts', () => {
     webmcpTools.forEach((tool) => registry.registerTool(tool));
 
     const guestTools = registry.getRegisteredToolsInfo();
-    expect(guestTools).toHaveLength(29);
+    expect(guestTools).toHaveLength(32);
     for (const tool of guestTools) {
       expect(tool.status).toBe(tool.permission === 'PUBLIC' ? 'AVAILABLE' : 'LOGIN_REQUIRED');
     }
