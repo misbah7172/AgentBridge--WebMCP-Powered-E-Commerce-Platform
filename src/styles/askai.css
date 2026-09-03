@@ -1,0 +1,466 @@
+/* ============================================
+   Ask AI Panel — Styles
+   Uses existing CSS variables from globals.css
+   ============================================ */
+
+/* ---- Floating Trigger Button ---- */
+.askai-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9998;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  background: var(--brand-gradient);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(6, 182, 212, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: askai-pulse 3s ease-in-out infinite;
+}
+.askai-trigger:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.55), 0 0 50px rgba(6, 182, 212, 0.25);
+}
+.askai-trigger svg {
+  width: 26px;
+  height: 26px;
+}
+@keyframes askai-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(6, 182, 212, 0.15); }
+  50% { box-shadow: 0 4px 25px rgba(59, 130, 246, 0.55), 0 0 55px rgba(6, 182, 212, 0.25); }
+}
+
+/* ---- Panel Container ---- */
+.askai-panel {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  z-index: 9999;
+  width: 420px;
+  max-height: 600px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-medium);
+  background: rgba(15, 20, 32, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: askai-slide-up 0.25s ease-out;
+}
+@keyframes askai-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 480px) {
+  .askai-panel {
+    right: 8px;
+    left: 8px;
+    bottom: 80px;
+    width: auto;
+    max-height: 70vh;
+  }
+}
+
+/* ---- Panel Header ---- */
+.askai-header {
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(17, 22, 34, 0.8);
+}
+.askai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.askai-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.askai-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.askai-header-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.askai-header-actions {
+  display: flex;
+  gap: 6px;
+}
+.askai-header-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.askai-header-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+/* ---- Settings / API Key ---- */
+.askai-settings {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(21, 28, 44, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.askai-settings-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.askai-settings-row label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 50px;
+  font-family: var(--font-mono);
+}
+.askai-settings-input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  font-family: var(--font-mono);
+  transition: border-color 0.15s;
+}
+.askai-settings-input:focus {
+  border-color: var(--brand-primary);
+}
+.askai-settings-input::placeholder {
+  color: var(--text-muted);
+}
+.askai-settings-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ---- Messages Area ---- */
+.askai-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+  max-height: 360px;
+}
+.askai-messages::-webkit-scrollbar {
+  width: 4px;
+}
+.askai-messages::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+/* ---- Empty State ---- */
+.askai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  padding: 24px;
+  text-align: center;
+}
+.askai-empty-icon {
+  font-size: 36px;
+  opacity: 0.6;
+}
+.askai-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.askai-empty-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.askai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.askai-suggestion-chip {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.askai-suggestion-chip:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* ---- Message Bubbles ---- */
+.askai-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 92%;
+  animation: askai-msg-in 0.2s ease-out;
+}
+@keyframes askai-msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.askai-msg--user {
+  align-self: flex-end;
+}
+.askai-msg--model {
+  align-self: flex-start;
+}
+.askai-msg-bubble {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.askai-msg--user .askai-msg-bubble {
+  background: var(--brand-gradient);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+.askai-msg--model .askai-msg-bubble {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 4px;
+}
+
+/* ---- Tool Action Badges ---- */
+.askai-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.askai-tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.askai-tool-badge--success {
+  border-color: var(--success);
+  color: var(--success);
+  background: var(--success-bg);
+}
+.askai-tool-badge--failed {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.askai-tool-badge--executing {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+.askai-tool-badge--awaiting {
+  border-color: var(--warning);
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.askai-tool-badge-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ---- Confirmation Card ---- */
+.askai-confirm {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warning);
+  background: rgba(245, 158, 11, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.askai-confirm-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.askai-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+.askai-confirm-btn {
+  flex: 1;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.askai-confirm-btn--yes {
+  background: var(--success);
+  color: white;
+}
+.askai-confirm-btn--yes:hover {
+  background: #0ea572;
+}
+.askai-confirm-btn--no {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+.askai-confirm-btn--no:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+/* ---- Input Area ---- */
+.askai-input-area {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(17, 22, 34, 0.8);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.askai-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  resize: none;
+  min-height: 40px;
+  max-height: 80px;
+  line-height: 1.4;
+  transition: border-color 0.15s;
+}
+.askai-input:focus {
+  border-color: var(--brand-primary);
+}
+.askai-input::placeholder {
+  color: var(--text-muted);
+}
+.askai-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--brand-gradient);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.askai-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+.askai-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.askai-send-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Typing Indicator ---- */
+.askai-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  align-self: flex-start;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 4px;
+}
+.askai-typing-dots {
+  display: flex;
+  gap: 4px;
+}
+.askai-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: askai-dot-bounce 1.2s infinite;
+}
+.askai-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.askai-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes askai-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.askai-typing-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ---- Error Banner ---- */
+.askai-error {
+  padding: 8px 14px;
+  margin: 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}

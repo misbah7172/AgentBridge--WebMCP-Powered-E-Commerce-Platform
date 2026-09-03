@@ -8,10 +8,11 @@ import Footer from '@/components/layout/Footer';
 import AuthModal from '@/components/auth/AuthModal';
 import CartDrawer from '@/components/cart/CartDrawer';
 import WebMCPIndicator from '@/components/webmcp/WebMCPIndicator';
+import AskAIPanel from '@/components/askai/AskAIPanel';
 
 export const metadata: Metadata = {
   title: 'AgentBridge | WebMCP-Powered E-Commerce Platform',
-  description: 'Next-generation e-commerce platform exposing 18+ real tools on document.modelContext for AI agents while delivering a sleek human shopping experience.',
+  description: 'Next-generation e-commerce platform exposing 29 WebMCP tools on document.modelContext for AI agents while delivering a sleek human shopping experience.',
 };
 
 export default function RootLayout({
@@ -33,6 +34,7 @@ export default function RootLayout({
               <AuthModal />
               <CartDrawer />
               <WebMCPIndicator />
+              <AskAIPanel />
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
@@ -40,3 +42,4 @@ export default function RootLayout({
     </html>
   );
 }
+
