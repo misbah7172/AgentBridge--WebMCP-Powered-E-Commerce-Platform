@@ -18,7 +18,7 @@ AgentBridge is a Next.js 14 full-stack e-commerce application that serves both h
                          ┌──────────▼───────────┐
                          │   WebMCP Registry    │
                          │                      │
-                         │  • Tool Registration │
+                         │  • 34 Native Tools   │
                          │  • Schema Validation │
                          │  • State Gating      │
                          │  • Error Structuring │
@@ -29,7 +29,7 @@ AgentBridge is a Next.js 14 full-stack e-commerce application that serves both h
                  │                  │                   │
       ┌──────────▼──────────┐ ┌────▼────────┐ ┌───────▼──────────┐
       │     React UI        │ │ API Routes  │ │  Context Layer   │
-      │     (Next.js)       │ │ (18 routes) │ │ (Auth/Cart/WL)   │
+      │   (Next.js 14)      │ │ (18 routes) │ │ (Auth/Cart/WL/AI)│
       └──────────┬──────────┘ └─────┬───────┘ └──────────────────┘
                  │                  │
                  └────────┬─────────┘
@@ -57,7 +57,7 @@ The WebMCP layer is responsible for tool lifecycle management and agent-facing i
 | Component | Responsibility |
 |-----------|---------------|
 | `registry.ts` | Singleton orchestrator managing tool registration, native `document.modelContext` bridge, `AbortController`-based lifecycle, state tracking, input validation, error structuring, and execution listeners |
-| `tools/*.ts` | 29 tool definitions organized by domain (auth, product, cart, wishlist, order, shipping), each with semantic descriptions, JSON schemas, and async execute functions |
+| `tools/*.ts` | 34 tool definitions organized by 8 domains (auth, navigation, apparel, product, cart, wishlist, order, shipping), each with semantic descriptions, JSON schemas, and async execute functions |
 | `types.ts` | TypeScript interfaces for `WebMCPTool`, `JSONSchema`, `RegisteredToolInfo`, and response contracts |
 | `testing/` | Direct execution trace harness for deterministic testing without browser context |
 
@@ -65,15 +65,16 @@ The WebMCP layer is responsible for tool lifecycle management and agent-facing i
 
 | Component | Responsibility |
 |-----------|---------------|
-| Pages | Next.js route handlers for home, products, product detail, cart, checkout, compare, and account |
+| Pages | Next.js App Router handlers for home, catalog, product details, cart, checkout, compare (`/compare`), and account |
 | API Routes | 18 REST endpoints handling authentication, products, cart, orders, wishlist, coupons, shipping, and addresses |
-| Layout | Root layout providing auth, cart, and wishlist context providers plus the WebMCP status indicator |
+| Error Boundary | `error.tsx` client boundary ensuring resilient UI recovery with diagnostic digests |
+| Layout | Root layout providing auth, cart, wishlist, and Ask AI context providers plus the WebMCP status indicator |
 
 ### Service Layer (`src/lib/services/`)
 
 | Service | Responsibility |
 |---------|---------------|
-| `productService` | Catalog search, filtering, sorting, recommendations, comparison, and promotions |
+| `productService` | Catalog search, apparel color/gender filtering, sizing guides, product recommendations, side-by-side comparisons, and resilient fallback data |
 | `cartService` | Cart CRUD operations with stock validation, discount calculation, and price aggregation |
 | `orderService` | Order creation, history retrieval, detail inspection, and cancellation with ownership verification |
 | `wishlistService` | Wishlist item management |
@@ -86,6 +87,7 @@ The WebMCP layer is responsible for tool lifecycle management and agent-facing i
 | `AuthContext` | User authentication state, login/logout handlers, WebMCP auth event synchronization |
 | `CartContext` | Cart state management, UI drawer control, WebMCP execution listener for cart count updates |
 | `WishlistContext` | Wishlist state management |
+| `AskAIContext` | In-app conversational AI drawer visibility and state management |
 
 ### Data Layer
 
@@ -94,6 +96,7 @@ The WebMCP layer is responsible for tool lifecycle management and agent-facing i
 | ORM | Prisma 5 with type-safe client generation |
 | Database | PostgreSQL hosted on Neon |
 | Models | User, Address, Category, Product, Review, Cart, CartItem, Wishlist, WishlistItem, Order, OrderItem, Coupon |
+| Resilience | Graceful in-memory fallbacks (`DEFAULT_CATEGORIES`, `FALLBACK_FEATURED_PRODUCTS`) ensuring zero SSR crashes during cold starts |
 
 ## Data Flow
 
@@ -120,8 +123,9 @@ Both paths share identical API routes, service logic, database operations, and s
 
 ## Cross-Boundary State Synchronization
 
-When an AI agent modifies application state through WebMCP tools (e.g., logging in, adding to cart), the changes must be reflected in both the WebMCP registry and the React UI:
+When an AI agent modifies application state through WebMCP tools (e.g., logging in, adding to cart), the changes are reflected across both boundaries:
 
-- **Authentication**: Auth tools dispatch a `webmcp-auth-change` `CustomEvent` on `window`. The `AuthContext` listens for this event and updates its state, ensuring the UI reflects agent-initiated login/logout.
-- **Cart state**: The `CartContext` subscribes to WebMCP execution events. Cart-modifying tool results update the cart item count, which the registry uses to gate `create_order` availability.
-- **Tool availability**: The registry re-syncs with the native `document.modelContext` API on every state change, aborting stale registrations and creating new ones via `AbortController` signals.
+- **Authentication**: Auth tools dispatch a `webmcp-auth-change` `CustomEvent` on `window`. `AuthContext` listens for this event and updates React state, keeping the UI in sync.
+- **Cart state**: `CartContext` subscribes to WebMCP execution events. Cart-modifying tool results update the cart item count, which the registry uses to gate `create_order` availability.
+- **Tool availability**: The registry re-syncs with the native `document.modelContext` API on every state change, updating the indicator count (`18/34` to `34/34`) dynamically.
+- **In-Page Navigation**: Navigation tools dispatch `webmcp-navigation` events that Next.js client routers consume to transition users smoothly to pages (such as `/compare` or `/products/[id]`).

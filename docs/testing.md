@@ -2,22 +2,23 @@
 
 ## Overview
 
-AgentBridge testing validates that all 32 WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, produce structured error responses, and complete multi-step agent journeys. The test infrastructure is organized in four tiers, progressing from fast deterministic validation to provider-backed evaluation.
+AgentBridge testing validates that all 34 WebMCP tools correctly enforce schemas, respect authentication and state boundaries, execute against the correct API endpoints, produce structured error responses, and complete multi-step agent journeys. The test infrastructure is organized in four tiers, progressing from fast deterministic validation to provider-backed evaluation.
 
 ## Tier 1: Deterministic Tool Tests
 
 **Location:** `tests/webmcp/tools/`
 **Runner:** `npm test` (Vitest)
-**Count:** 67 tests across 8 files
+**Count:** **76 tests across 9 files**
 
 ### Test Files
 
 | File | Tests | Scope |
 |------|-------|-------|
-| `registry.test.ts` | 7 | Unknown tool errors, required parameter validation, type checking, auth barriers, direct execution tracing, 32-tool registration and state gating, checkout policy |
+| `registry.test.ts` | 7 | Unknown tool errors, required parameter validation, type checking, auth barriers, direct execution tracing, 34-tool registration, state gating, checkout policy |
 | `requestContracts.test.ts` | 8 | Every tool's API endpoint, HTTP method, query parameter encoding, and request body validation |
 | `authTools.test.ts` | 12 | Auth tool request contracts (4), response format validation (4), registry integration and validation (4) |
 | `navigationTools.test.ts` | 10 | Navigation contracts (3), destination boundaries, auth/cart barriers, product detail navigation, compare URL formatting, CustomEvent dispatching |
+| `apparelTools.test.ts` | 9 | Apparel category and department validation, color availability (`COLOR_NOT_AVAILABLE_FOR_DEPARTMENT`), sizing guide queries, schema constraints |
 | `stateJourneys.test.ts` | 5 | Journey A (search→inspect→add→view), Journey B (search→compare→add→update→view), Journey C (auth barrier→login→retry), Journey D (search→add→verify→checkout), full state transition cycle |
 | `failureModes.test.ts` | 18 | Wrong execution order (2), wrong arguments including negative/zero/non-integer quantities (6), missing required data (4), unknown tool (1), network failures (2), mid-chain failures (3) |
 | `checkoutPolicy.test.ts` | 3 | Demo payment method validation, order confirmation requirement |
@@ -25,7 +26,7 @@ AgentBridge testing validates that all 32 WebMCP tools correctly enforce schemas
 
 ### What These Tests Validate
 
-- All 29 tools call the correct API endpoint with the correct HTTP method
+- All 34 tools call the correct API endpoint with the correct HTTP method
 - Query parameters are properly URL-encoded
 - POST/PUT/DELETE request bodies contain the expected fields
 - Required parameter validation rejects missing fields with descriptive error messages
@@ -34,6 +35,8 @@ AgentBridge testing validates that all 32 WebMCP tools correctly enforce schemas
 - Enum validation rejects undeclared values
 - Protected tools are blocked without authentication
 - `create_order` is blocked when the cart is empty
+- Department and color availability constraints are strictly enforced
+- In-browser navigation events are dispatched accurately without full-page reloads
 - API failure responses are forwarded to the caller without transformation
 - Network failures produce structured `EXECUTION_ERROR` responses with `retryable: true`
 
@@ -78,9 +81,9 @@ Measures AI agent planning accuracy across tool selection, argument generation, 
 ## Execution Summary
 
 ```bash
-npm test                              # Tier 1: 67 deterministic tests
+npm test                              # Tier 1: 76 deterministic tests (Vitest)
 npm run test:webmcp:integration       # Tier 2: 23 integration tests
-npm run test:webmcp:e2e              # Tier 3: 7 browser E2E specs
+npm run test:webmcp:e2e              # Tier 3: 7 browser E2E specs (Playwright)
 npm run eval:webmcp                   # Schema validation (16 cases)
 npm run eval:webmcp:llm              # Tier 4: LLM planning evaluation
 ```

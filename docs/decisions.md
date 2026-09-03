@@ -11,7 +11,7 @@ This document records key architectural decisions made during the AgentBridge We
 
 **Context:** WebMCP integration can be implemented as Category 1 (Native), where tools are registered directly on `document.modelContext`, or as Category 2 (Adapter), where an external bridge mediates between the website API and a WebMCP proxy.
 
-**Decision:** AgentBridge implements exclusively Category 1 — Native WebMCP. All 29 tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
+**Decision:** AgentBridge implements exclusively Category 1 — Native WebMCP. All 34 tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
 
 **Rationale:** The application already exposes same-origin API routes. Tools invoke these APIs via `fetch()` within the browser context, sharing the user's session cookies and security boundaries. An adapter would introduce unnecessary latency, complexity, and an additional failure surface without providing material benefit.
 
@@ -30,7 +30,7 @@ This document records key architectural decisions made during the AgentBridge We
 - Native `document.modelContext` bridge with `AbortController`-based registration
 - Three-tier state-aware tool availability (public, authenticated, transactional)
 - Input validation covering types, enums, required fields, integer checks, and min/max constraints
-- Five structured error codes with retryability and user-action metadata
+- Structured error codes with retryability and user-action metadata
 - Execution listeners, subscriber notifications, and tracing
 - Test-environment polyfill for Node.js
 
@@ -38,7 +38,7 @@ This document records key architectural decisions made during the AgentBridge We
 
 **Rationale:** The custom registry exceeds the package's capabilities across every dimension. Adopting the package would require abandoning state-aware gating, structured error responses, and the deterministic test harness — capabilities that are central to the project's testing and evaluation framework.
 
-**Consequences:** Maintenance responsibility for the registry remains with the project. The registry is validated through 57 deterministic tests.
+**Consequences:** Maintenance responsibility for the registry remains with the project. The registry is validated through 76 deterministic tests.
 
 ---
 
@@ -68,7 +68,7 @@ This document records key architectural decisions made during the AgentBridge We
 
 **Rationale:** Agent autonomy requires the ability to complete full journeys — including authentication — without relying on human UI interaction. This is particularly important for Journey C (auth barrier detection and recovery).
 
-**Consequences:** The tool count increased from 25 to 29. The `AuthContext` `useEffect` now includes an event listener for WebMCP-initiated auth state changes. The `logout` tool requires authentication to prevent unauthorized session termination.
+**Consequences:** The `AuthContext` includes an event listener for WebMCP-initiated auth state changes. The `logout` tool requires authentication to prevent unauthorized session termination.
 
 ---
 
@@ -109,8 +109,60 @@ This document records key architectural decisions made during the AgentBridge We
 
 **Context:** When an AI agent authenticates via the `login` WebMCP tool, the React `AuthContext` is unaware of the state change because the operation occurred outside the React component tree.
 
-**Decision:** Authentication tools dispatch a `webmcp-auth-change` `CustomEvent` on `window`. The `AuthContext` listens for this event and updates its internal state to reflect the change.
+**Decision:** Authentication and navigation tools dispatch `CustomEvent`s on `window` (`webmcp-auth-change` and `webmcp-navigation`). Context providers and router listeners consume these events to keep the browser UI completely in sync.
 
 **Rationale:** `CustomEvent` is a standard browser API for cross-boundary communication that avoids tight coupling between WebMCP tools and React components. The event-driven approach ensures the UI reflects agent-initiated state changes without requiring direct dependency injection.
 
-**Consequences:** The `AuthContext` `useEffect` registers an event listener and returns a cleanup function for proper unmount handling. This pattern is extensible to other state synchronization requirements.
+**Consequences:** Clean decoupling between WebMCP tool execution and React state lifecycle.
+
+---
+
+## ADR-008: Dedicated Product Comparison System (Parallel & Serial Views)
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Context:** Comparing luxury fashion items requires analyzing garment composition, fit, care instructions, sleeve styling, and price deltas. Displaying arbitrary numbers of items in fixed-width tables leads to horizontal overflow and layout breakage on smaller screens.
+
+**Decision:** Implemented a dedicated comparison route (`/compare` and `/products/compare`) with adaptive presentation modes:
+- **Parallel Mode (2–3 products)**: Side-by-side synchronized specification grid with aligned attributes.
+- **Serial Mode (4+ products)**: Stacked vertical cards with comprehensive specification tables.
+- **Agent Navigation**: Added `view_comparison_page` WebMCP tool so agents can directly transition the user's viewport to the comparison matrix.
+
+**Rationale:** Adapting layout mode based on product count guarantees optimal readability and prevents horizontal table clipping across desktop and mobile viewports.
+
+---
+
+## ADR-009: In-Browser Voice Interaction & Text-to-Speech Engine
+
+**Date:** 2026-09-04
+**Status:** Accepted
+
+**Context:** Conversational shopping via Ask AI benefits from voice interaction. However, unconstrained speech synthesis in browsers can cause audio overlap, background playback after closing drawers, and stale closures ignoring mute commands during multi-second LLM streaming calls.
+
+**Decision:** Built a complete voice engine using browser-native Web Speech APIs:
+- `SpeechRecognition` for voice input with interim transcripts and optional auto-send.
+- `SpeechSynthesis` for audio replies with markdown stripping.
+- Synchronous `voiceReplyRef` to ensure async agent turns respect real-time mute states.
+- Dedicated `stopSpeaking()` handler that immediately silences audio on mute, drawer close, or Escape.
+- Active sound wave indicator with a 1-click `[■ Stop Audio]` button.
+
+**Rationale:** Leveraging native browser Web Speech APIs eliminates third-party audio service latency and costs while maintaining strict user control over speech playback.
+
+---
+
+## ADR-010: Luxury Atelier Domain Migration & Resilient Fallback Data Layer
+
+**Date:** 2026-09-04
+**Status:** Accepted
+
+**Context:** The catalog transitioned from consumer electronics to a luxury fashion atelier collection (62 bespoke pieces of women's tops, men's t-shirts, and denim). On serverless environments (Netlify Functions), database cold starts or transient connection latency could cause Server Component SSR crashes.
+
+**Decision:**
+1. Reseeded database with 62 luxury apparel garments categorized into 4 departments.
+2. Implemented `safeParseJson` to handle both string URLs and serialized JSON arrays safely.
+3. Added in-memory fallback datasets (`FALLBACK_FEATURED_PRODUCTS`, `DEFAULT_CATEGORIES`) in `productService.ts`.
+4. Created an editorial Next.js Error Boundary (`src/app/error.tsx`) with diagnostic digest rendering and 1-click recovery.
+5. Auto-provisioned demo user credentials (`demo@agentbridge.io`, Alex Rivera) with support for both `password123` and `demo1234`.
+
+**Rationale:** A production-grade e-commerce application must never render an unhandled 500 error screen during cold starts or transient network blips.

@@ -380,7 +380,7 @@ This document provides a machine-readable inventory of all 34 WebMCP tools regis
 - **Underlying API**: Browser navigation / Next.js client router
 
 ### `view_comparison_page`
-- **Purpose**: Directly navigate the user's browser to the hardware comparison page to compare 2 to 4 products side-by-side (parallel) or stacked (serial)
+- **Purpose**: Directly navigate the user's browser to the product comparison page to compare 2 to 4 luxury garments side-by-side (parallel) or stacked (serial)
 - **Permission**: PUBLIC
 - **Required input**: `productIds` (array of strings, min 2 products)
 - **Optional input**: `view` ('auto' | 'parallel' | 'serial')
@@ -389,3 +389,30 @@ This document provides a machine-readable inventory of all 34 WebMCP tools regis
 - **State requirements**: None
 - **Side effects**: Dispatches `webmcp-navigation` browser event; loads `/compare?ids=...&view=...`
 - **Underlying API**: Browser navigation / Next.js client router
+
+---
+
+## Apparel & Fashion Tools
+
+### `filter_apparel`
+- **Purpose**: Filter fashion catalog by clothing attributes: gender, category, color, size, and price
+- **Permission**: PUBLIC
+- **Required input**: None (all parameters optional)
+- **Optional input**: `gender` ('Women' | 'Men' | 'All'), `category` ('Tops' | 'T-Shirts' | 'Jeans' | 'All'), `color` ('Red' | 'Blue' | 'Green' | 'Black' | 'White' | 'Indigo' | 'All'), `size` (string), `minPrice` (number), `maxPrice` (number), `inStockOnly` (boolean), `limit` (integer, 1–50)
+- **Output**: List of matching garments with colors, available sizes, fabric compositions, prices, and stock
+- **Errors**: `COLOR_NOT_AVAILABLE_FOR_DEPARTMENT` (prevents selecting Red or Green for Men; provides suggested available palettes)
+- **State requirements**: None
+- **Side effects**: None (read-only)
+- **Underlying API**: `GET /api/products?gender=...&color=...`
+
+### `get_apparel_size_guide`
+- **Purpose**: Retrieve verified atelier size charts, fit recommendations, and body measurements (bust, chest, waist, hips, inseam)
+- **Permission**: PUBLIC
+- **Required input**: None
+- **Optional input**: `category` ('WomensTops' | 'MensTshirts' | 'WomensJeans' | 'MensJeans' | 'All')
+- **Output**: Detailed size chart tables, measurements in inches and cm, and fabric-specific fit advice
+- **Errors**: None (returns default guide if unlisted)
+- **State requirements**: None
+- **Side effects**: None (read-only)
+- **Underlying API**: Native WebMCP in-memory verified sizing matrix
+
