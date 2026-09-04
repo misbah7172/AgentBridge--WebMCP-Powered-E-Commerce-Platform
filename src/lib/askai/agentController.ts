@@ -11,7 +11,8 @@
 import { webmcpRegistry } from '@/webmcp/registry';
 import { formatToolsForGemini, buildSystemInstruction } from './toolFormatter';
 import { redactForLLM } from './responseRedactor';
-import { logToolExecution } from './auditLog';
+import { sanitizeUserMessage, sanitizeToolResult } from './promptGuard';
+import { logToolExecution, logInjectionAttempt } from './auditLog';
 import type {
   AgentConfig,
   AgentResponse,
@@ -50,15 +51,27 @@ export async function runAgentTurn(
 ): Promise<AgentResponse> {
   const toolActions: ToolAction[] = [];
 
-  // 1. Discover currently available tools (state-aware — changes with auth/cart)
+  // 1. Sanitize user input for prompt injection defense
+  const sanitized = sanitizeUserMessage(userMessage);
+  if (sanitized.injectionDetected) {
+    logInjectionAttempt(userMessage, sanitized.detectedPatterns, sanitized.blocked);
+  }
+  if (sanitized.blocked) {
+    return {
+      message: 'I can only help with shopping-related requests. Could you please rephrase your question?',
+      toolActions: [],
+    };
+  }
+
+  // 2. Discover currently available tools (state-aware — changes with auth/cart)
   const registeredTools = webmcpRegistry.getRegisteredToolsInfo();
   const geminiTools = formatToolsForGemini(registeredTools);
   const authState = webmcpRegistry.getAuthState();
 
-  // 2. Build the conversation with the new user message
+  // 3. Build the conversation with the sanitized user message
   const contents: GeminiContent[] = [
     ...conversationHistory,
-    { role: 'user', parts: [{ text: userMessage }] },
+    { role: 'user', parts: [{ text: sanitized.sanitized }] },
   ];
 
   // 3. Agentic loop: call model → execute tools → feed results → repeat
@@ -145,7 +158,10 @@ export async function runAgentTurn(
         (a) => a.name === call.name && a.status !== 'awaiting-confirmation',
       );
       const rawResult = matchingAction?.result;
-      const safeResult = rawResult ? redactForLLM(call.name, rawResult) : null;
+      // Layer 1: Redact PII from tool result
+      const piiSafe = rawResult ? redactForLLM(call.name, rawResult) : null;
+      // Layer 2: Sanitize for indirect prompt injection (adversarial UGC in results)
+      const safeResult = piiSafe ? sanitizeToolResult(piiSafe) : null;
       return {
         functionResponse: {
           name: call.name,

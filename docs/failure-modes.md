@@ -1,6 +1,6 @@
 # Failure Modes
 
-This document catalogs the failure modes that agents may encounter when interacting with AgentBridge WebMCP tools, along with the expected error responses and recommended recovery strategies.
+This document catalogs the failure modes that agents may encounter when interacting with Bridge to Agentia WebMCP tools, along with the expected error responses and recommended recovery strategies.
 
 ## Registry-Level Failures
 
@@ -17,7 +17,20 @@ These errors are produced by the `WebMCPRegistry` before any API call is made.
 | Invalid enum value | `INVALID_INPUT` | No | Use one of the documented enum values. |
 | Protected tool called while unauthenticated | `AUTHENTICATION_REQUIRED` | No | Use the `login` or `register` tool first, then retry. |
 | Cart-dependent tool called with empty cart | `CART_EMPTY` | No | Add items to the cart before attempting checkout. |
+| Requested color not stocked in department | `COLOR_NOT_AVAILABLE_FOR_DEPARTMENT` | No | Consult available color options for that department and inform user. |
 | Network or runtime failure during execution | `EXECUTION_ERROR` | Yes | Retry after a brief delay (maximum 2 attempts). |
+
+## Security-Level Defenses & Failures
+
+These conditions are intercepted by the LLM security boundary (`promptGuard.ts` and `responseRedactor.ts`).
+
+| Failure Condition | Error / Event Code | Retryable | Recommended Action |
+|-------------------|-------------------|-----------|-------------------|
+| Prompt injection instruction override | `PROMPT_INJECTION_DETECTED` | No | Message quarantined and blocked. Inform user to rephrase query using natural shopping terms. |
+| Role/persona spoofing or mode switch | `PROMPT_INJECTION_DETECTED` | No | Request blocked; agent maintains standard luxury stylist persona. |
+| System prompt extraction attempt | `PROMPT_INJECTION_DETECTED` | No | Request blocked; agent declines politely and focuses on shopping tasks. |
+| Delimiter escape attack | `PROMPT_INJECTION_DETECTED` | No | Malicious boundary markers quarantined and logged to persistent audit log. |
+| LLM invoked non-existent auth tool | `TOOL_NOT_FOUND` | No | `login`/`register` are hidden from Gemini. Instruct user to click the top-right "Sign In" button. |
 
 ## API-Level Business Failures
 

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const searchQuery = process.env.WEBMCP_E2E_SEARCH_QUERY || 'laptop';
 
-test.describe('AgentBridge browser commerce journey', () => {
+test.describe('Bridge to Agentia browser commerce journey', () => {
   test('searches, inspects, adds, inspects cart, and removes a runtime-resolved product', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Sign In' }).click();

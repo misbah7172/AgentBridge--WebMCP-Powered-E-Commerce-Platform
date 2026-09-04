@@ -9,7 +9,7 @@ Validation was performed against the local application at `http://localhost:3000
 | Verification | Result |
 |-------------|--------|
 | Response headers | `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)` confirmed |
-| Tool registration | 29 tools registered on `document.modelContext` |
+| Tool registration | 34 tools registered on `document.modelContext` (18 Public, 16 Authenticated/Transactional) |
 | Public tool execution | Verified via Inspector |
 | Protected tool gating | Verified: tools require authentication before execution |
 | Network captures | [Network overview](evidence/webmcp-network-overview.png), [Response headers](evidence/webmcp-response-headers.png) |

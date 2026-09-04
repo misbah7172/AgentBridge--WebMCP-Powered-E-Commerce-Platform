@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('AgentBridge WebMCP tool discovery and direct execution', () => {
+test.describe('Bridge to Agentia WebMCP tool discovery and direct execution', () => {
   test('exposes document.modelContext with getTools and executeTool', async ({ page }) => {
     await page.goto('/');
 

@@ -6,7 +6,7 @@ WebMCP (Web Model Context Protocol) is an emerging browser API that enables web 
 
 ## Implementation Category
 
-AgentBridge implements **Category 1 — Native WebMCP**. Tools are registered directly on `document.modelContext` using the Chrome Imperative API. No external adapter, proxy, or remote MCP server is involved. See [ADR-001](decisions.md#adr-001-native-webmcp-implementation-category-1) for the rationale.
+Bridge to Agentia implements **Category 1 — Native WebMCP**. Tools are registered directly on `document.modelContext` using the Chrome Imperative API. No external adapter, proxy, or remote MCP server is involved. See [ADR-001](decisions.md#adr-001-native-webmcp-implementation-category-1) for the rationale.
 
 ## Native Architecture
 
@@ -115,6 +115,10 @@ All errors include an `errorDetails` object:
 | Input validation | Registry-level schema validation before any API execution |
 | Checkout gating | Populated cart + `confirmDemoOrder: true` + `DEMO_CARD` payment method |
 | Scope limitation | Administrative functions are not exposed through WebMCP |
+| LLM credential isolation | `login` and `register` tools filtered from LLM function declarations |
+| PII response redaction | Sensitive contact/address fields stripped; emails masked recursively (`responseRedactor.ts`) |
+| Prompt injection defense | Boundary delimiters (`[USER_MESSAGE]`), pattern blocking, indirect injection sanitization (`promptGuard.ts`) |
+| Persistent audit trail | Dual-layer logger with async append-only JSONL storage (`/api/audit`) |
 
 ## Current Limitations
 

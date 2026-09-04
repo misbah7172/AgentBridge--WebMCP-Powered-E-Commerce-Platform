@@ -1,6 +1,6 @@
 # WebMCP Testing Environment
 
-This document describes the database configuration, safety boundaries, and execution procedures for the AgentBridge test infrastructure.
+This document describes the database configuration, safety boundaries, and execution procedures for the Bridge to Agentia test infrastructure.
 
 ## Database Safety Boundary
 
@@ -33,7 +33,7 @@ The integration runner applies tracked migrations, resets the target database, s
 
 ```bash
 npm install
-npm test                              # 57 deterministic tests (no database)
+npm test                              # 90 deterministic tests (no database)
 npm run eval:webmcp                   # 16 eval case schema validation (no database)
 npm run db:test:verify                # Verify database configuration
 npm run test:webmcp:integration       # 23 integration tests (requires database)
@@ -43,13 +43,14 @@ npm run test:webmcp:e2e              # 7 browser E2E specs (requires running app
 
 ## Deterministic Test Coverage
 
-The database-free Vitest suites validate the complete 29-tool inventory through the exported `webmcpTools` list:
+The database-free Vitest suites validate the complete 34-tool inventory through the exported `webmcpTools` list:
 
 | Concern | Coverage |
 |---------|----------|
 | Request contracts | Every tool's relative endpoint, HTTP method, encoded identifiers, and JSON request body |
 | Input validation | Required fields, type checking, integer validation, enum constraints, and min/max bounds |
 | Authentication | Every protected tool is hidden from guest discovery and rejected before execution |
+| Security Defenses | PII response redaction, prompt injection defense, indirect injection sanitization, audit logging |
 | API failure forwarding | Every tool correctly returns structured error payloads from upstream API responses |
 | State mutations | Cart, wishlist, order, and address tools use explicit HTTP methods and request bodies |
 | Multi-step journeys | Four journey sequences (A–D) validated through sequential tool execution |

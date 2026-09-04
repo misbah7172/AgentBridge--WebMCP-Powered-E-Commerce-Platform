@@ -33,7 +33,7 @@ export default function Footer() {
                   display: 'block',
                 }}
               >
-                AgentBridge
+                Bridge to Agentia
               </span>
               <span
                 style={{
@@ -151,7 +151,7 @@ export default function Footer() {
           }}
         >
           <div>
-            &copy; {new Date().getFullYear()} AgentBridge Atelier. All Rights Reserved.
+            &copy; {new Date().getFullYear()} Bridge to Agentia Atelier. All Rights Reserved.
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
             <span>USD ($)</span>

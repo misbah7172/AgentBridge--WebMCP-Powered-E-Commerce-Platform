@@ -1,6 +1,6 @@
-# AgentBridge — WebMCP-Powered Luxury Fashion E-Commerce Platform
+# Bridge to Agentia — WebMCP-Powered Luxury Fashion E-Commerce Platform
 
-AgentBridge is a full-stack e-commerce application that implements browser-native WebMCP (Web Model Context Protocol) to expose structured commerce operations as discoverable, schema-validated tools for AI agents — while delivering a modern luxury fashion shopping experience for human users.
+Bridge to Agentia is a full-stack e-commerce application that implements browser-native WebMCP (Web Model Context Protocol) to expose structured commerce operations as discoverable, schema-validated tools for AI agents — while delivering a modern luxury fashion shopping experience for human users.
 
 ---
 
@@ -41,7 +41,7 @@ AgentBridge is a full-stack e-commerce application that implements browser-nativ
 
 ## 1. Overview
 
-AgentBridge is a Next.js 14 luxury storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **34 WebMCP tools** directly on `document.modelContext`, enabling AI agents operating within the browser to discover apparel by color, gender, and sizing, consult verified sizing charts, compare products side-by-side or serially, manage carts, handle wishlists, navigate pages, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
+Bridge to Agentia is a Next.js 14 luxury storefront backed by Prisma 5 and PostgreSQL (Neon). It registers **34 WebMCP tools** directly on `document.modelContext`, enabling AI agents operating within the browser to discover apparel by color, gender, and sizing, consult verified sizing charts, compare products side-by-side or serially, manage carts, handle wishlists, navigate pages, place demo orders, and authenticate — all through the same server-authoritative API routes used by the React UI.
 
 Human shoppers and AI agents share identical business logic, database, authentication, and authorization. No separate API surface or external adapter exists.
 
@@ -51,7 +51,7 @@ Visual inference is unreliable for authenticated commerce operations that requir
 
 ## 3. Solution
 
-AgentBridge exposes typed, schema-validated browser tools that invoke the same same-origin API routes as the UI. The server enforces all business rules — authentication, authorization, stock availability, coupon validity, and order-state transitions — regardless of whether the caller is a human or an agent.
+Bridge to Agentia exposes typed, schema-validated browser tools that invoke the same same-origin API routes as the UI. The server enforces all business rules — authentication, authorization, stock availability, coupon validity, and order-state transitions — regardless of whether the caller is a human or an agent.
 
 ## 4. What is WebMCP?
 
@@ -120,7 +120,7 @@ The storefront is styled with a minimalist European luxury fashion aesthetic:
 
 ## 8. Dedicated Product Comparison System
 
-AgentBridge features a dedicated comparison route (`/compare` and `/products/compare`):
+Bridge to Agentia features a dedicated comparison route (`/compare` and `/products/compare`):
 - **Parallel Mode (2–3 Products)**: Renders products in a side-by-side column grid with synchronized attribute rows (Price, Fabric, Fit, Collar, Sleeve, Care, Origin, and Rating).
 - **Serial Mode (4+ Products)**: Automatically switches to a stacked vertical card layout with expansive technical specifications.
 - **Agent Navigation**: AI agents can directly navigate users to comparisons via `view_comparison_page({ productIds: [...], view: "parallel" | "serial" })` or query comparison matrices via `compare_products`.
@@ -136,11 +136,12 @@ An integrated AI Stylist drawer powered by Google Gemini and native browser Web 
   - Synchronous `voiceReplyRef` tracking to eliminate stale closure execution.
   - Active audio sound wave indicator banner with a 1-click `[■ Stop Audio]` button.
   - Automatic speech cancellation upon drawer close or Escape key.
-- **Confirmation Gates**: Sensitive mutations (`create_order`, `cancel_order`, `clear_cart`, `logout`) pause for explicit user confirmation in the chat before execution.
+- **Confirmation Gates**: Sensitive mutations (`create_order`, `cancel_order`, `clear_cart`, `logout`, `update_shipping_address`, `remove_from_cart`) pause for explicit user confirmation in the chat before execution.
+- **Security Boundaries**: Real-time prompt injection defense, PII response redactor, auth tool isolation, and persistent audit logging protect user privacy and prevent unauthorized actions.
 
 ## 10. Tool Inventory
 
-AgentBridge registers **34 tools** across eight functional categories:
+Bridge to Agentia registers **34 tools** across eight functional categories:
 
 | Category | Tools | Permission |
 |----------|-------|-----------|
@@ -162,7 +163,7 @@ Tool availability is governed by a three-tier reactive state model:
 | Application State | Available Tools | Restrictions | Indicator Badge |
 |-------------------|----------------|--------------|-----------------|
 | Guest (logged out) | 18 Public tools | Protected tools return `AUTHENTICATION_REQUIRED` | `18/34` |
-| Authenticated, cart empty | 33 tools (all authenticated except order placement) | `create_order` returns `CART_EMPTY` | `34/34` |
+| Authenticated, cart empty | 33 tools (all authenticated except order placement) | `create_order` returns `CART_EMPTY` | `33/34` |
 | Authenticated, cart populated | All 34 tools active | `create_order` requires `confirmDemoOrder: true` | `34/34` |
 
 State transitions are reactive. Login exposes protected tools immediately. Cart mutations update `create_order` availability. Logout revokes all protected tool registrations. See [docs/webmcp-state-model.md](docs/webmcp-state-model.md).
@@ -194,7 +195,28 @@ The registry validates every tool invocation before execution:
 
 API responses retain structured error payloads (`PRODUCT_NOT_FOUND`, `INSUFFICIENT_STOCK`, `UNAUTHORIZED_ACCESS`, `NOT_CANCELLABLE`, etc.). The registry does not mask or transform these. For the complete error catalog, see [docs/failure-modes.md](docs/failure-modes.md).
 
-## 14. Agent Journeys
+## 14. Security & Privacy Architecture
+
+The platform enforces end-to-end security and data isolation across LLM and agent boundaries:
+
+1. **Authentication Tool Isolation**:
+   - `login` and `register` tools are filtered from Gemini function declarations.
+   - LLMs never see, handle, or prompt for raw user passwords. Authentication is handled exclusively through browser UI.
+2. **PII Redaction Layer (`responseRedactor.ts`)**:
+   - Recursively masks email addresses (`u***@domain.com`) across all tool output objects and arrays.
+   - Replaces street addresses, phone numbers, and zip codes with semantic placeholders (e.g., `[Saved Address #1]`, `[Order shipping address]`) before sending tool results to Gemini.
+   - Preserves public catalog and non-PII product attributes intact.
+3. **Prompt Injection Defenses (`promptGuard.ts`)**:
+   - Wraps inputs in `[USER_MESSAGE]` and tool results in `[TOOL_RESULT]` boundary delimiters.
+   - Detects and blocks instruction override attempts, role/persona manipulation, system prompt extraction, data exfiltration, and delimiter escape attacks.
+   - Sanitizes tool results against indirect prompt injection via untrusted user-generated content.
+4. **Persistent Audit Logging (`/api/audit`)**:
+   - Dual-layer logging with an in-memory buffer for real-time inspection and async batched flush to persistent append-only JSONL files (`data/audit.log`).
+   - Tracks tool execution times, sanitized inputs, results, and prompt injection detection events.
+5. **Server-Side AI Proxy (`/api/ai/chat`)**:
+   - Secures the Gemini API key on the server while supporting direct client keys when configured.
+
+## 15. Agent Journeys
 
 The following multi-step journeys are validated through deterministic tests and evaluation cases:
 
@@ -205,20 +227,20 @@ The following multi-step journeys are validated through deterministic tests and 
 | **C — Authentication Recovery** | Detect `AUTHENTICATION_REQUIRED` → `login` → retry protected operation |
 | **D — Demo Checkout** | `search_products` → `add_to_cart` → `get_cart` → `create_order` |
 
-## 15. Testing Strategy
+## 16. Testing Strategy
 
 Testing is organized in four tiers:
 
 | Tier | Scope | Runner | Count |
 |------|-------|--------|-------|
-| **Deterministic** | Registry, schemas, contracts, navigation, apparel filters, sizing, state journeys, failure modes | `npm test` (Vitest) | **76 tests** |
+| **Deterministic** | Registry, schemas, contracts, navigation, apparel filters, sizing, security defenses, state journeys, failure modes | `npm test` (Vitest) | **90 tests** |
 | **Integration** | End-to-end service execution against database | `npm run test:webmcp:integration` | 23 tests |
 | **Browser E2E** | UI flows + `document.modelContext` verification | `npm run test:webmcp:e2e` (Playwright) | 7 specs |
 | **LLM Evaluation** | Model planning accuracy (tool selection, arguments, chains) | `npm run eval:webmcp:llm` | 16 cases |
 
 For detailed coverage breakdown, see [docs/testing.md](docs/testing.md).
 
-## 16. Evaluation Framework
+## 17. Evaluation Framework
 
 The LLM evaluation framework measures AI agent planning accuracy without executing tools or mutating application state:
 - **Tool Selection Accuracy** — correct tool set identified (order-independent)
@@ -229,7 +251,7 @@ The LLM evaluation framework measures AI agent planning accuracy without executi
 
 The framework supports pluggable providers via the `LLMProvider` interface, with built-in support for OpenAI and a mock provider for CI environments. For methodology details, see [docs/evaluation.md](docs/evaluation.md).
 
-## 17. Browser Verification
+## 18. Browser Verification
 
 WebMCP compliance is verified through:
 - **Response headers**: `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)` confirmed via Chrome DevTools
@@ -238,20 +260,21 @@ WebMCP compliance is verified through:
 
 See [docs/webmcp-browser-verification.md](docs/webmcp-browser-verification.md) for the verification protocol.
 
-## 18. Metrics Summary
+## 19. Metrics Summary
 
 | Metric | Result |
 |--------|--------|
 | Registered WebMCP tools | **34** (18 Public, 16 Authenticated/Transactional) |
-| Deterministic tests | **76 passed** (9 test suites) |
+| Deterministic tests | **90 passed** (10 test suites) |
 | Integration tests | 23 passed |
 | Evaluation dataset | 16/16 schema valid |
 | Browser E2E specs | 7 specs |
+| Production build | Compiled successfully (28 routes) |
 | Response headers | Verified (`tools=(self)`, `Origin-Agent-Cluster: ?1`) |
 | Inspector verification | Manually verified |
 | Apparel catalog | 62 pieces (Tops, Tees, Denim) |
 
-## 19. Technology Stack
+## 20. Technology Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -266,15 +289,15 @@ See [docs/webmcp-browser-verification.md](docs/webmcp-browser-verification.md) f
 | Testing | Vitest 2, Playwright |
 | Deployment | Netlify (Node.js 20, `@netlify/plugin-nextjs`) |
 
-## 20. Project Structure
+## 21. Project Structure
 
 ```
 ├── src/
-│   ├── app/                    # Next.js App Router pages & API routes (18 endpoints)
+│   ├── app/                    # Next.js App Router pages & API routes (20 endpoints)
 │   │   ├── compare/            # Dedicated Side-by-Side & Serial Comparison Page
 │   │   ├── products/           # Luxury Catalog and Product Detail Pages
 │   │   ├── error.tsx           # Atelier Server Component Error Boundary
-│   │   └── api/                # Same-origin REST endpoints
+│   │   └── api/                # Same-origin REST endpoints (incl. /api/ai/chat, /api/audit)
 │   ├── webmcp/
 │   │   ├── registry.ts         # WebMCPRegistry — singleton orchestrator
 │   │   ├── types.ts            # Tool, schema, and response interfaces
@@ -289,15 +312,18 @@ See [docs/webmcp-browser-verification.md](docs/webmcp-browser-verification.md) f
 │   │   │   ├── wishlistTools.ts# 3 wishlist tools
 │   │   │   └── shippingTools.ts# 3 shipping/address tools
 │   │   └── testing/            # Direct execution trace harness
+│   ├── lib/
+│   │   ├── askai/              # Agent controller, prompt guard, PII redactor, audit logger
+│   │   └── services/           # Commerce service layer (product, cart, order, wishlist)
 │   ├── components/
 │   │   ├── askai/              # Ask AI Assistant, Voice Controls, Audio Indicator
 │   │   ├── webmcp/             # WebMCP Status Indicator & Interactive Tool Inspector
 │   │   ├── products/           # ProductCard, FilterSidebar, Comparison Matrix
 │   │   └── layout/             # Luxury Navbar, Mobile Navigation Drawer, Footer
 │   ├── context/                # React context providers (Auth, Cart, Wishlist, AskAI)
-│   └── lib/                    # Auth tokens, db client, commerce services
+│   └── styles/                 # Design system tokens and component styles
 ├── tests/
-│   ├── webmcp/tools/           # 9 deterministic test suites (76 tests)
+│   ├── webmcp/tools/           # 10 deterministic test suites (90 tests)
 │   └── browser/                # Playwright E2E specs
 ├── evals/                      # 16 LLM evaluation cases (JSON)
 ├── scripts/                    # Eval runners and provider abstraction
@@ -306,7 +332,7 @@ See [docs/webmcp-browser-verification.md](docs/webmcp-browser-verification.md) f
 └── prisma/                     # Schema and seed script (62 apparel items)
 ```
 
-## 21. Setup and Installation
+## 22. Setup and Installation
 
 **Prerequisites**: Node.js 20+, PostgreSQL instance (Neon recommended).
 
@@ -324,7 +350,7 @@ npm run db:seed
 * **Password**: `password123` (or `demo1234`)
 * **1-Click**: Available directly in the sign-in modal via "1-Click Demo Login".
 
-## 22. Running the Application
+## 23. Running the Application
 
 ```bash
 npm run dev

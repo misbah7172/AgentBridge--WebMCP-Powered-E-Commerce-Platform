@@ -1,17 +1,17 @@
 # WebMCP Validation Report
 
-**Validation date:** 2026-09-03
+**Validation date:** 2026-09-04
 **Scope:** Local demo application with Neon demo database
 
 ## Measured Results
 
 | Validation | Result | Command |
 |------------|--------|---------|
-| Deterministic WebMCP tests | 57 passed (7 test files) | `npm test` |
+| Deterministic WebMCP tests | 90 passed (10 test files) | `npm test` |
 | Database integration tests | 23 passed | `npm run test:webmcp:integration` |
 | Evaluation dataset schema | 16/16 passed | `npm run eval:webmcp` |
 | Browser E2E specs | 7 specs | `npm run test:webmcp:e2e` |
-| Production build | Compiled successfully (24 routes) | `npx next build` |
+| Production build | Compiled successfully (28 routes) | `npx next build` |
 | Response headers | Verified | Chrome DevTools |
 | Inspector tool execution | Verified | Chrome Model Context Tool Inspector |
 
@@ -21,11 +21,15 @@
 |---------|--------|
 | Public and authenticated tool exposure follows authentication state | Implemented and tested |
 | Auth tools (`login`, `register`, `logout`, `get_account_info`) enable agent autonomy | Implemented and tested |
+| Auth isolation from LLM (`login`/`register` omitted from Gemini declarations) | Implemented and tested |
+| Response PII redaction (recursive email masking, address/phone scrubbing) | Implemented and tested |
+| Prompt injection defenses (delimiters, pattern blocking, indirect injection sanitization) | Implemented and tested |
+| Persistent server-side audit logging with JSONL append-only storage (`/api/audit`) | Implemented and tested |
 | `create_order` gating: unavailable with empty cart, requires `confirmDemoOrder: true`, accepts only `DEMO_CARD` | Implemented and tested |
 | Cart mutations update both browser/UI state and WebMCP tool availability | Implemented and tested |
 | Integer validation with `minimum`/`maximum` constraints on quantity fields | Implemented and tested |
 | Schema validation rejects invalid input before API execution | Implemented and tested |
-| Structured error responses for all five registry-level error codes | Implemented and tested |
+| Structured error responses for all six registry-level error codes | Implemented and tested |
 | Multi-step journey validation (Journeys A through D) | Implemented and tested |
 | Failure mode coverage (wrong order, wrong args, missing data, network, mid-chain) | Implemented and tested |
 

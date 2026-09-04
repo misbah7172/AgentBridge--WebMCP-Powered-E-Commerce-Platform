@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AgentBridge evaluation framework measures how effectively AI agents can discover, select, and invoke WebMCP tools to complete e-commerce tasks. Evaluations are organized into two categories: deterministic validation (schema compliance and contract verification) and probabilistic assessment (LLM planning accuracy).
+The Bridge to Agentia evaluation framework measures how effectively AI agents can discover, select, and invoke WebMCP tools to complete e-commerce tasks. Evaluations are organized into two categories: deterministic validation (schema compliance and contract verification) and probabilistic assessment (LLM planning accuracy).
 
 ## Deterministic Evaluations
 
@@ -29,7 +29,7 @@ Validates that every tool adheres to its declared contract:
 - Returns structured responses preserving the API's payload
 - Handles failures with appropriate error codes and retry semantics
 
-**Pass criterion:** All 57 deterministic tests must pass.
+**Pass criterion:** All 90 deterministic tests must pass.
 
 ## Probabilistic Evaluations
 

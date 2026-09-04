@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding AgentBridge Luxury Fashion & Apparel Database...');
+  console.log('Seeding Bridge to Agentia Luxury Fashion & Apparel Database...');
 
   // 1. Clean existing data cleanly
   await prisma.orderItem.deleteMany();

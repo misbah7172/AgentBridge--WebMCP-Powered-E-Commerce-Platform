@@ -13,7 +13,7 @@ import AskAIPanel from '@/components/askai/AskAIPanel';
 import WebMCPNavigationListener from '@/components/navigation/WebMCPNavigationListener';
 
 export const metadata: Metadata = {
-  title: 'AgentBridge Atelier | WebMCP-Powered Luxury Fashion & Apparel',
+  title: 'Bridge to Agentia Atelier | WebMCP-Powered Luxury Fashion & Apparel',
   description: 'Next-generation luxury apparel platform exposing 34 WebMCP tools on document.modelContext for AI agents while delivering a sleek human shopping experience.',
 };
 

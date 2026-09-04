@@ -1,8 +1,8 @@
 /**
- * AgentBridge: Autonomous AI Agent Simulation Script
+ * Bridge to Agentia: Autonomous AI Agent Simulation Script
  * 
  * Demonstrates an AI Agent discovering and invoking WebMCP tools
- * on the AgentBridge E-Commerce Platform.
+ * on the Bridge to Agentia E-Commerce Platform.
  * 
  * Usage:
  *   npx tsx scripts/agent-demo.ts
@@ -18,7 +18,7 @@ if (typeof globalThis.document === 'undefined') {
 
 async function runAgentDemo() {
   console.log('================================================================');
-  console.log('  AgentBridge WebMCP Autonomous Agent Demonstration');
+  console.log('  Bridge to Agentia WebMCP Autonomous Agent Demonstration');
   console.log('================================================================\n');
 
   // Step 1: Register tools
@@ -56,7 +56,7 @@ async function runAgentDemo() {
   // Step 5: Unauthenticated Cart Action
   console.log('[User Prompt]: "Great! Please add this laptop to my cart."\n');
   console.log('[Agent]: Attempting WebMCP tool: add_to_cart({ productId, quantity: 1 }) while UNLOGGED');
-  
+
   const unauthAttempt = await webmcpRegistry.executeTool('add_to_cart', {
     productId: laptop.id,
     quantity: 1,
@@ -90,7 +90,7 @@ async function runAgentDemo() {
 
   // Step 7: Retry add_to_cart
   console.log('[Agent]: Retrying WebMCP tool: add_to_cart({ productId, quantity: 1 })');
-  
+
   // Directly simulate database cart mutation
   let cart = await prisma.cart.findUnique({ where: { userId: demoUser.id } });
   if (!cart) {

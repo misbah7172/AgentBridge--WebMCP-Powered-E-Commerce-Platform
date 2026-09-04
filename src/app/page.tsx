@@ -562,7 +562,7 @@ export default async function HomePage() {
               <span style={{ fontStyle: 'italic' }}>Navigable by Autonomous Agents.</span>
             </h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '28px' }}>
-              AgentBridge Atelier exposes 34 server-authoritative WebMCP tools directly on <code style={{ color: 'var(--text-primary)', fontWeight: 600 }}>document.modelContext</code>. AI agents and shoppers interact with the same database, inventory checks, sizing charts, and cart rules without scrapers.
+              Bridge to Agentia Atelier exposes 34 server-authoritative WebMCP tools directly on <code style={{ color: 'var(--text-primary)', fontWeight: 600 }}>document.modelContext</code>. AI agents and shoppers interact with the same database, inventory checks, sizing charts, and cart rules without scrapers.
             </p>
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
               <Link href="/compare" className="btn btn-primary btn-sm">

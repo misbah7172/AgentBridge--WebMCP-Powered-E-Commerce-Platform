@@ -1,6 +1,6 @@
 # Architectural Decisions
 
-This document records key architectural decisions made during the AgentBridge WebMCP implementation, their rationale, and their consequences.
+This document records key architectural decisions made during the Bridge to Agentia WebMCP implementation, their rationale, and their consequences.
 
 ---
 
@@ -11,7 +11,7 @@ This document records key architectural decisions made during the AgentBridge We
 
 **Context:** WebMCP integration can be implemented as Category 1 (Native), where tools are registered directly on `document.modelContext`, or as Category 2 (Adapter), where an external bridge mediates between the website API and a WebMCP proxy.
 
-**Decision:** AgentBridge implements exclusively Category 1 — Native WebMCP. All 34 tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
+**Decision:** Bridge to Agentia implements exclusively Category 1 — Native WebMCP. All 34 tools are registered directly in the browser via the `WebMCPRegistry` class. No external adapter, proxy, or MCP server is introduced.
 
 **Rationale:** The application already exposes same-origin API routes. Tools invoke these APIs via `fetch()` within the browser context, sharing the user's session cookies and security boundaries. An adapter would introduce unnecessary latency, complexity, and an additional failure surface without providing material benefit.
 
@@ -47,7 +47,7 @@ This document records key architectural decisions made during the AgentBridge We
 **Date:** 2026-09-03
 **Status:** Accepted
 
-**Context:** The specification references Angular-specific patterns (`provideExperimentalWebMcpTools`, `declareExperimentalWebMcpTool`, Signal Forms). AgentBridge uses Next.js and React.
+**Context:** The specification references Angular-specific patterns (`provideExperimentalWebMcpTools`, `declareExperimentalWebMcpTool`, Signal Forms). Bridge to Agentia uses Next.js and React.
 
 **Decision:** Angular-specific APIs and patterns are not adopted. Tool definitions are framework-agnostic TypeScript objects.
 
@@ -166,3 +166,38 @@ This document records key architectural decisions made during the AgentBridge We
 5. Auto-provisioned demo user credentials (`demo@agentbridge.io`, Alex Rivera) with support for both `password123` and `demo1234`.
 
 **Rationale:** A production-grade e-commerce application must never render an unhandled 500 error screen during cold starts or transient network blips.
+
+---
+
+## ADR-011: LLM Auth Isolation, PII Redaction Layer & Prompt Injection Defense
+
+**Date:** 2026-09-04
+**Status:** Accepted
+
+**Context:** Allowing LLMs unconstrained access to authentication tools or displaying unredacted user personal data (passwords, addresses, phone numbers) creates severe privacy risks, data exfiltration vulnerabilities, and training data contamination concerns. In addition, user messages and tool responses could carry adversarial prompt injection instructions.
+
+**Decision:**
+1. **Auth Tool Isolation**: Excluded `login` and `register` tools from Gemini function declarations in `toolFormatter.ts`. Authentication operations remain strictly within the user-facing browser UI.
+2. **PII Redaction Layer (`responseRedactor.ts`)**: Implemented recursive PII scrubbing for all tool responses prior to LLM context insertion, masking email addresses (`u***@domain.com`) and replacing street addresses, zip codes, and phone numbers with semantic placeholders.
+3. **Prompt Injection Defense (`promptGuard.ts`)**: Wrapped inputs in boundary markers (`[USER_MESSAGE]` and `[TOOL_RESULT]`), blocked direct instruction overrides, role-spoofing, system prompt extraction, and data exfiltration patterns, and neutralized indirect prompt injections embedded in tool responses.
+4. **Server-Side AI Proxy (`/api/ai/chat`)**: Added an internal proxy endpoint to securely store the `GEMINI_API_KEY` on the server rather than exposing it in the client bundle.
+
+**Rationale:** Defense-in-depth isolation ensures that sensitive user credentials and PII never leak into external LLM prompts or training logs.
+
+---
+
+## ADR-012: Persistent Server-Side Audit Logging & Security Trail
+
+**Date:** 2026-09-04
+**Status:** Accepted
+
+**Context:** Monitoring tool executions, security policy enforcement, and prompt injection attempts requires a reliable, persistent audit trail that survives page reloads and browser crashes, without compromising client responsiveness or logging raw PII.
+
+**Decision:**
+1. Built a dual-layer logging architecture: an in-memory buffer (`auditLog.ts`) for real-time frontend debugging and WebMCP status display, paired with a debounced, batched asynchronous background flush.
+2. Implemented `POST /api/audit` and `GET /api/audit` in Next.js App Router, writing redacted, append-only JSONL entries to `data/audit.log`.
+3. Added threat detection auditing for prompt injection attempts, capturing detected signatures, timestamp, duration, and error codes.
+4. Excluded `/data` from git tracking to prevent accidental check-in of operational logs.
+
+**Rationale:** Append-only JSONL logging provides high-performance, tamper-resistant operational visibility while server-side PII scrubbing guarantees compliance with data protection best practices.
+

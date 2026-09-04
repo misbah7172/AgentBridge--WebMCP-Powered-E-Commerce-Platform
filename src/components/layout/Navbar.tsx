@@ -139,7 +139,7 @@ export default function Navbar() {
                 lineHeight: 1.1,
               }}
             >
-              AgentBridge
+              Bridge to Agentia
             </span>
             <span
               style={{

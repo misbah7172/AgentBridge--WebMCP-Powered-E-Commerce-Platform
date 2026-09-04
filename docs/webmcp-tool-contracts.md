@@ -1,6 +1,6 @@
 # WebMCP Tool Contracts
 
-This document defines the behavioral contracts that govern all 34 WebMCP tools registered by AgentBridge. These contracts are enforced by the `WebMCPRegistry` and validated through 76 deterministic tests.
+This document defines the behavioral contracts that govern all 34 WebMCP tools registered by Bridge to Agentia. These contracts are enforced by the `WebMCPRegistry` and validated through 90 deterministic tests.
 
 ## Contract Rules
 
@@ -60,3 +60,13 @@ This document defines the behavioral contracts that govern all 34 WebMCP tools r
 | `EXECUTION_ERROR` | Network or runtime failure during tool execution | Yes | No |
 
 API-level business errors — including stock availability, coupon validation, ownership verification, and order-state restrictions — are returned in the API response payload. Callers should treat `success: false` as authoritative and avoid automatic retries unless `errorDetails.retryable` is explicitly `true`.
+
+## Security & Privacy Contracts for LLM Integration
+
+When WebMCP tools are declared to conversational AI agents (such as Google Gemini in Ask AI):
+
+1. **Authentication Tool Isolation**: `login` and `register` tools are omitted from LLM function declarations. The model cannot solicit, view, or submit credentials. Authentication operations are conducted exclusively by the user via the browser UI.
+2. **PII Response Redaction**: Tool execution outputs undergo recursive redaction before LLM context insertion. Recipient contact details (`phone`, `street`, `city`, `state`, `zipCode`, `country`) are replaced with semantic labels (e.g. `[Saved Address #1]`), and email addresses are masked (`u***@domain.com`).
+3. **Prompt Injection Boundary Sanitization**: Tool results are wrapped in `[TOOL_RESULT]` boundary delimiters, and indirect prompt injection attempts embedded in catalog descriptions or user-generated reviews are neutralized.
+4. **Audit Logging**: All tool executions, durations, sanitized parameters, and security events are logged in memory and asynchronously persisted to append-only JSONL files (`/api/audit`).
+

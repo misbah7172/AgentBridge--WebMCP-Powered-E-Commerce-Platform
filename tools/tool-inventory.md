@@ -1,6 +1,6 @@
 # WebMCP Tool Inventory
 
-This document provides a machine-readable inventory of all 34 WebMCP tools registered by AgentBridge.
+This document provides a machine-readable inventory of all 34 WebMCP tools registered by Bridge to Agentia.
 
 ---
 
@@ -13,6 +13,7 @@ This document provides a machine-readable inventory of all 34 WebMCP tools regis
 - **Output**: User profile `{ id, email, name, role }` on success; error message on failure
 - **Errors**: Invalid credentials, network failure
 - **State requirements**: None (available when logged out)
+- **LLM Exposure**: Isolated from LLM function declarations for credential safety (UI-only auth)
 - **Side effects**: Sets authentication state, exposes protected tools
 - **Underlying API**: `POST /api/auth/login`
 
@@ -23,6 +24,7 @@ This document provides a machine-readable inventory of all 34 WebMCP tools regis
 - **Output**: Newly created user profile on success
 - **Errors**: Duplicate email, validation failure
 - **State requirements**: None
+- **LLM Exposure**: Isolated from LLM function declarations for credential safety (UI-only auth)
 - **Side effects**: Creates user account, auto-login, exposes protected tools
 - **Underlying API**: `POST /api/auth/register`
 

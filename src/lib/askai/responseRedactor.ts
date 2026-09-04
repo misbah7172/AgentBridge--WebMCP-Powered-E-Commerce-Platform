@@ -19,11 +19,58 @@ const GLOBAL_PII_FIELDS = new Set([
   'ssn',
 ]);
 
-/** Fields containing address/contact PII that are redacted by default. */
-const CONTACT_PII_FIELDS = new Set([
+/**
+ * Address and contact PII fields redacted globally across all tool results.
+ * These are stripped recursively at every depth to prevent any tool from
+ * leaking physical location or contact information to the LLM.
+ */
+const ADDRESS_PII_FIELDS = new Set([
   'phone',
   'street',
   'zipCode',
+  'fullName',
+  'city',
+  'state',
+  'country',
+]);
+
+/**
+ * Tools whose results contain address data that needs special handling.
+ * For these tools, we apply structured redaction (e.g., "Saved Address #1")
+ * instead of generic "[redacted]" to preserve useful context for the LLM.
+ */
+const ADDRESS_AWARE_TOOLS = new Set([
+  'get_saved_addresses',
+  'get_order_details',
+  'get_order_history',
+  'create_order',
+  'update_shipping_address',
+]);
+
+/**
+ * Tools whose results should NOT have address fields stripped by the global
+ * default rule (because they don't contain user addresses — e.g., product
+ * catalog tools that have "country" in shipping estimate results).
+ *
+ * For these tools, only GLOBAL_PII_FIELDS are stripped.
+ */
+const CATALOG_SAFE_TOOLS = new Set([
+  'search_products',
+  'get_product_details',
+  'filter_products',
+  'sort_products',
+  'get_product_recommendations',
+  'compare_products',
+  'check_product_stock',
+  'get_current_promotions',
+  'get_available_product_variants',
+  'filter_apparel',
+  'get_apparel_size_guide',
+  'get_shipping_estimate',
+  'navigate_to_page',
+  'view_product_page',
+  'view_comparison_page',
+  'apply_coupon',
 ]);
 
 /**
@@ -40,11 +87,19 @@ export function redactForLLM(toolName: string, result: unknown): unknown {
   // Deep clone to avoid mutating the original
   const redacted = JSON.parse(JSON.stringify(result));
 
-  // Always strip global PII fields at every depth
+  // Always strip global PII fields (passwords, tokens, etc.) at every depth
   redactFieldsRecursive(redacted, GLOBAL_PII_FIELDS, '[redacted]');
 
-  // Apply tool-specific redaction rules
-  applyToolSpecificRedactions(toolName, redacted);
+  // Apply tool-specific structured redaction for address-aware tools
+  if (ADDRESS_AWARE_TOOLS.has(toolName)) {
+    applyAddressToolRedactions(toolName, redacted);
+  } else if (!CATALOG_SAFE_TOOLS.has(toolName)) {
+    // For unknown/unclassified tools, apply address PII redaction as safety net
+    redactFieldsRecursive(redacted, ADDRESS_PII_FIELDS, '[redacted]');
+  }
+
+  // Redact emails everywhere (mask, don't remove)
+  redactEmailsRecursive(redacted);
 
   return redacted;
 }
@@ -78,6 +133,29 @@ function redactFieldsRecursive(
 }
 
 /**
+ * Recursively find and mask all email-like values in an object.
+ */
+function redactEmailsRecursive(obj: any): void {
+  if (!obj || typeof obj !== 'object') return;
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      if (item && typeof item === 'object') redactEmailsRecursive(item);
+    }
+    return;
+  }
+
+  for (const key of Object.keys(obj)) {
+    const value = obj[key];
+    if (typeof value === 'string' && value.includes('@') && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
+      obj[key] = maskEmail(value);
+    } else if (typeof value === 'object' && value !== null) {
+      redactEmailsRecursive(value);
+    }
+  }
+}
+
+/**
  * Mask an email address: "john.doe@example.com" → "j***@example.com"
  */
 function maskEmail(email: string): string {
@@ -88,58 +166,65 @@ function maskEmail(email: string): string {
 }
 
 /**
- * Apply tool-specific redaction logic.
+ * Structured redaction for tools that return address/shipping data.
+ * Preserves semantic context (e.g., "Saved Address #1") while hiding real PII.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyToolSpecificRedactions(toolName: string, data: any): void {
+function applyAddressToolRedactions(toolName: string, data: any): void {
   switch (toolName) {
-    case 'get_account_info':
-      if (data?.user?.email) {
-        data.user.email = maskEmail(data.user.email);
-      }
-      break;
-
     case 'get_saved_addresses':
       if (Array.isArray(data?.addresses)) {
         data.addresses.forEach((addr: any, i: number) => {
-          if (addr.street) addr.street = `[Saved Address #${i + 1}]`;
-          if (addr.phone) addr.phone = '[redacted]';
-          if (addr.zipCode) addr.zipCode = '[redacted]';
+          redactAddressObject(addr, `Saved Address #${i + 1}`);
         });
       }
       break;
 
     case 'get_order_details':
-      // Redact shipping address details from order
-      if (data?.order?.shippingAddress || data?.shippingAddress) {
-        const addr = data.order?.shippingAddress || data.shippingAddress;
-        if (addr.street) addr.street = '[redacted]';
-        if (addr.phone) addr.phone = '[redacted]';
-        if (addr.zipCode) addr.zipCode = '[redacted]';
-      }
+      redactNestedAddress(data?.order?.shippingAddress || data?.shippingAddress, 'Order shipping address');
       break;
 
     case 'get_order_history':
-      // Redact any embedded address data from order summaries
       if (Array.isArray(data?.orders)) {
         data.orders.forEach((order: any) => {
           if (order.shippingAddress) {
-            redactFieldsRecursive(order.shippingAddress, CONTACT_PII_FIELDS, '[redacted]');
+            redactNestedAddress(order.shippingAddress, 'Order shipping address');
           }
         });
       }
       break;
 
     case 'create_order':
-      // The result of placing an order — keep order number but redact address
-      if (data?.order?.shippingAddress) {
-        redactFieldsRecursive(data.order.shippingAddress, CONTACT_PII_FIELDS, '[redacted]');
-      }
+      redactNestedAddress(data?.order?.shippingAddress, 'Order shipping address');
       break;
 
-    default:
-      // For all other tools, apply contact PII redaction recursively as a safety net
-      redactFieldsRecursive(data, CONTACT_PII_FIELDS, '[redacted]');
+    case 'update_shipping_address':
+      if (data?.address) {
+        redactAddressObject(data.address, 'Updated address');
+      }
       break;
+  }
+}
+
+/**
+ * Redact a single address object in-place.
+ */
+function redactAddressObject(addr: any, label: string): void {
+  if (!addr || typeof addr !== 'object') return;
+  if (addr.fullName) addr.fullName = `[${label}]`;
+  if (addr.street) addr.street = '[redacted]';
+  if (addr.city) addr.city = '[redacted]';
+  if (addr.state) addr.state = '[redacted]';
+  if (addr.zipCode) addr.zipCode = '[redacted]';
+  if (addr.country) addr.country = '[redacted]';
+  if (addr.phone) addr.phone = '[redacted]';
+}
+
+/**
+ * Redact an address that might be a nested object or JSON string.
+ */
+function redactNestedAddress(addr: any, label: string): void {
+  if (!addr) return;
+  if (typeof addr === 'object') {
+    redactAddressObject(addr, label);
   }
 }

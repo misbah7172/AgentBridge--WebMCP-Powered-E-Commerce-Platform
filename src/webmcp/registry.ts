@@ -33,7 +33,9 @@ export class WebMCPRegistry {
         this.nativeRegisterToolFn = existingContext.registerTool.bind(existingContext);
       }
 
-      const modelContextImpl: ModelContextInterface & { __isAgentBridgeWebMCP?: boolean } = {
+      const modelContextImpl: ModelContextInterface & {
+        __isAgentBridgeWebMCP?: boolean
+      } = {
         __isAgentBridgeWebMCP: true,
         registerTool: (tool: WebMCPTool) => {
           self.registerTool(tool);

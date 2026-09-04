@@ -2,15 +2,22 @@
 
 ## Overview
 
-AgentBridge is a Next.js 14 full-stack e-commerce application that serves both human shoppers and AI agents through a unified, server-authoritative architecture. The same API routes, service layer, and database serve both the React UI and WebMCP tool invocations, ensuring consistent behavior, security enforcement, and state management regardless of the caller.
+Bridge to Agentia is a Next.js 14 full-stack e-commerce application that serves both human shoppers and AI agents through a unified, server-authoritative architecture. The same API routes, service layer, and database serve both the React UI and WebMCP tool invocations, ensuring consistent behavior, security enforcement, and state management regardless of the caller.
 
 ## Architecture Diagram
 
 ```
                          ┌──────────────────────┐
                          │       AI Agent       │
-                         │   (Browser Context)  │
+                         │   (Ask AI UI / User) │
                          └──────────┬───────────┘
+                                    │
+                                    │ User Prompt
+                                    ▼
+                         ┌──────────────────────┐        Generate /        ┌──────────────────────┐
+                         │   Agent Controller   │ ◄──────────────────────► │ Gemini API (external)│
+                         │  (Orchestration)     │       Function Call      │ (Tool Declarations)  │
+                         └──────────┬───────────┘                          └──────────────────────┘
                                     │
                           document.modelContext
                         getTools() / executeTool()
@@ -50,6 +57,18 @@ AgentBridge is a Next.js 14 full-stack e-commerce application that serves both h
 
 ## Layer Responsibilities
 
+### Agent Orchestration Layer (`src/lib/askai/`)
+
+The agent orchestration layer connects the conversational interface to LLMs and WebMCP tools.
+
+| Component | Responsibility |
+|-----------|---------------|
+| `agentController.ts` | Multi-turn loop orchestrator between Ask AI UI, Gemini API, and WebMCP tools; handles tool execution, destructive tool confirmation, PII redaction, and error recovery |
+| `promptGuard.ts` | Sanitizes user messages and tool results; enforces `[USER_MESSAGE]` and `[TOOL_RESULT]` boundaries; detects and blocks prompt injection patterns |
+| `responseRedactor.ts` | PII privacy boundary stripping sensitive contact/shipping fields (phone, address, credentials) and masking emails before tool results reach Gemini |
+| `auditLog.ts` | Dual-layer audit logger tracking tool executions and injection events with async flush to `/api/audit` |
+| `toolFormatter.ts` | Translates WebMCP tool schemas to Gemini `FunctionDeclaration` definitions; isolates auth tools (`login`/`register`) from LLM visibility |
+
 ### WebMCP Layer (`src/webmcp/`)
 
 The WebMCP layer is responsible for tool lifecycle management and agent-facing interfaces.
@@ -73,7 +92,7 @@ The WebMCP layer is responsible for tool lifecycle management and agent-facing i
 ### Service Layer (`src/lib/services/`)
 
 | Service | Responsibility |
-|---------|---------------|
+|-----------|---------------|
 | `productService` | Catalog search, apparel color/gender filtering, sizing guides, product recommendations, side-by-side comparisons, and resilient fallback data |
 | `cartService` | Cart CRUD operations with stock validation, discount calculation, and price aggregation |
 | `orderService` | Order creation, history retrieval, detail inspection, and cancellation with ownership verification |
@@ -111,15 +130,19 @@ Browser → React Component → fetch(/api/...) → API Route Handler
 ### AI Agent Path
 
 ```
-Agent → document.modelContext.executeTool(name, input)
+User → Ask AI UI → Agent Controller
+  → Gemini API (external): tool declarations + prompt → functionCall
+  → document.modelContext.executeTool(name, input)
   → WebMCP Registry: validate schema, check auth, check state
   → Tool.execute() → fetch(/api/...) → API Route Handler
   → Authentication Check → Service Layer → Prisma Client → PostgreSQL
   → Response → Registry: update state, notify listeners
-  → Structured Result → Agent
+  → Structured Result → Agent Controller (redact PII + sanitize)
+  → Gemini API (external): functionResponse → natural-language answer
+  → Ask AI UI → User
 ```
 
-Both paths share identical API routes, service logic, database operations, and security enforcement. The WebMCP registry adds a validation and state-gating layer before the API call, ensuring agents receive structured error responses for invalid inputs, missing authentication, or unavailable state before any server communication occurs.
+Both paths share identical API routes, service logic, database operations, and security enforcement. The Agent Controller coordinates between the user, the Gemini API for natural-language understanding and tool selection, and the WebMCP registry. The WebMCP registry adds a validation and state-gating layer before the API call, ensuring agents receive structured error responses for invalid inputs, missing authentication, or unavailable state before any server communication occurs.
 
 ## Cross-Boundary State Synchronization
 
@@ -129,3 +152,4 @@ When an AI agent modifies application state through WebMCP tools (e.g., logging 
 - **Cart state**: `CartContext` subscribes to WebMCP execution events. Cart-modifying tool results update the cart item count, which the registry uses to gate `create_order` availability.
 - **Tool availability**: The registry re-syncs with the native `document.modelContext` API on every state change, updating the indicator count (`18/34` to `34/34`) dynamically.
 - **In-Page Navigation**: Navigation tools dispatch `webmcp-navigation` events that Next.js client routers consume to transition users smoothly to pages (such as `/compare` or `/products/[id]`).
+
