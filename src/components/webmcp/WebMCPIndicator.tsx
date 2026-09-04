@@ -96,9 +96,7 @@ export default function WebMCPIndicator() {
     }
   };
 
-  const activeCount = user
-    ? tools.filter((t) => t.status !== 'LOGIN_REQUIRED').length
-    : tools.filter((t) => t.status === 'AVAILABLE' || t.permission === 'PUBLIC').length;
+  const activeCount = tools.filter((t) => t.status === 'AVAILABLE').length;
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
