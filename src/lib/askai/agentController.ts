@@ -10,6 +10,8 @@
 
 import { webmcpRegistry } from '@/webmcp/registry';
 import { formatToolsForGemini, buildSystemInstruction } from './toolFormatter';
+import { redactForLLM } from './responseRedactor';
+import { logToolExecution } from './auditLog';
 import type {
   AgentConfig,
   AgentResponse,
@@ -25,6 +27,8 @@ const DESTRUCTIVE_TOOLS = new Set([
   'cancel_order',
   'clear_cart',
   'logout',
+  'update_shipping_address',
+  'remove_from_cart',
 ]);
 
 const MAX_TOOL_ITERATIONS = 10;
@@ -116,7 +120,9 @@ export async function runAgentTurn(
       onToolAction?.(action);
 
       try {
+        const execStart = Date.now();
         const result = await webmcpRegistry.executeTool(call.name, call.args);
+        logToolExecution(call.name, call.args, result, Date.now() - execStart);
         action.status = result.success ? 'success' : 'failed';
         action.result = result;
         if (!result.success) action.error = result.message || result.error;
@@ -131,17 +137,20 @@ export async function runAgentTurn(
     // Add the model's response (with function calls) to the conversation
     contents.push({ role: 'model', parts: response.parts });
 
-    // Add tool results back as user messages with functionResponse parts
+    // Add tool results back as user messages with functionResponse parts.
+    // IMPORTANT: Results are redacted before being sent to the LLM to prevent PII leakage.
     const resultParts: GeminiPart[] = functionCalls.map((part: GeminiPart) => {
       const call = part.functionCall!;
       const matchingAction = toolActions.find(
         (a) => a.name === call.name && a.status !== 'awaiting-confirmation',
       );
+      const rawResult = matchingAction?.result;
+      const safeResult = rawResult ? redactForLLM(call.name, rawResult) : null;
       return {
         functionResponse: {
           name: call.name,
-          response: matchingAction?.result
-            ? (typeof matchingAction.result === 'object' ? matchingAction.result as Record<string, unknown> : { value: matchingAction.result })
+          response: safeResult
+            ? (typeof safeResult === 'object' ? safeResult as Record<string, unknown> : { value: safeResult })
             : { error: matchingAction?.error || 'Unknown error' },
         },
       };
@@ -177,15 +186,18 @@ export async function executeConfirmedAction(
   onToolAction?.(action);
 
   try {
+    const execStart = Date.now();
     const result = await webmcpRegistry.executeTool(confirmation.toolName, confirmation.toolArgs);
+    logToolExecution(confirmation.toolName, confirmation.toolArgs, result, Date.now() - execStart);
     action.status = result.success ? 'success' : 'failed';
     action.result = result;
     if (!result.success) action.error = result.message || result.error;
     onToolAction?.(action);
 
-    // Build context and ask the model to summarize the result
+    // Redact PII before sending the result summary to the LLM
+    const safeResult = redactForLLM(confirmation.toolName, result);
     const resultSummary = result.success
-      ? `The action ${confirmation.toolName} was confirmed and executed successfully. Result: ${JSON.stringify(result)}`
+      ? `The action ${confirmation.toolName} was confirmed and executed successfully. Result: ${JSON.stringify(safeResult)}`
       : `The action ${confirmation.toolName} failed: ${result.message || result.error}`;
 
     const contents: GeminiContent[] = [
@@ -216,6 +228,10 @@ export async function executeConfirmedAction(
 
 /**
  * Call the Gemini API with function calling support.
+ *
+ * Routes through the server-side proxy (/api/ai/chat) by default so the
+ * API key stays on the server. Falls back to a direct client-side call
+ * only when the user explicitly provides their own API key in settings.
  */
 async function callGeminiAPI(
   contents: GeminiContent[],
@@ -224,24 +240,42 @@ async function callGeminiAPI(
   isAuthenticated: boolean,
   toolCount: number,
 ): Promise<{ parts: GeminiPart[] }> {
-  const url = `${config.baseUrl}/models/${config.model}:generateContent?key=${config.apiKey}`;
-
-  const body: Record<string, unknown> = {
-    contents,
-    systemInstruction: {
-      parts: [{ text: buildSystemInstruction(toolCount, isAuthenticated) }],
-    },
+  const systemInstruction = {
+    parts: [{ text: buildSystemInstruction(toolCount, isAuthenticated) }],
   };
 
-  if (tools.length > 0) {
-    body.tools = [{ functionDeclarations: tools }];
-  }
+  const toolDeclarations = tools.length > 0 ? [{ functionDeclarations: tools }] : undefined;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  // Prefer the server-side proxy (keeps API key on the server).
+  // Fall back to direct Gemini API call only when the user provides their own key.
+  const useProxy = !config.apiKey;
+
+  let response: Response;
+
+  if (useProxy) {
+    // Server-side proxy — API key is stored in server env (GEMINI_API_KEY)
+    response = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction,
+        tools: toolDeclarations,
+        model: config.model,
+      }),
+    });
+  } else {
+    // Direct client-side call (user-provided key)
+    const url = `${config.baseUrl}/models/${config.model}:generateContent?key=${config.apiKey}`;
+    const body: Record<string, unknown> = { contents, systemInstruction };
+    if (toolDeclarations) body.tools = toolDeclarations;
+
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'Unknown error');

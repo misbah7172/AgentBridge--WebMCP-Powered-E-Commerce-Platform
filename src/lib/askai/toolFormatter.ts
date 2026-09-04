@@ -27,9 +27,16 @@ function cleanSchemaProperty(prop: Record<string, unknown>): Record<string, unkn
   return cleaned;
 }
 
+/**
+ * Tools that must NEVER be exposed to the LLM.
+ * Credentials and registration data must stay within the browser's auth UI
+ * and never flow through the LLM's context window.
+ */
+const LLM_HIDDEN_TOOLS = new Set(['login', 'register']);
+
 export function formatToolsForGemini(tools: RegisteredToolInfo[]): GeminiFunctionDeclaration[] {
   return tools
-    .filter((tool) => tool.status === 'AVAILABLE')
+    .filter((tool) => tool.status === 'AVAILABLE' && !LLM_HIDDEN_TOOLS.has(tool.name))
     .map((tool) => {
       const properties: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(tool.inputSchema.properties || {})) {
@@ -65,7 +72,7 @@ export function buildSystemInstruction(toolCount: number, isAuthenticated: boole
     `5. The user is currently ${isAuthenticated ? 'logged in' : 'NOT logged in (guest)'}. ` +
       (isAuthenticated
         ? 'You can use all available tools including cart and order management.'
-        : 'Some tools require login. If a user wants to use cart/order features, tell them to log in first or use the login tool.'),
+        : 'Some tools require login. If a user wants to use cart/order features, tell them to click the "Sign In" button in the top-right corner of the page to log in. You do NOT have a login or register tool — authentication is handled securely through the browser UI only.'),
     '6. For keyword queries, use search_products. For filtering apparel by color, gender (Women/Men), clothing type, or size, use filter_apparel.',
     '7. When showing products, include name, color, price, rating, and stock status.',
     '8. When the user says "add to cart" and a product was recently discussed, verify if they specified a size. If not, prompt them for size or use get_apparel_size_guide to help them choose.',

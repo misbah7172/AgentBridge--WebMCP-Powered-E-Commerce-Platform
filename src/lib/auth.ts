@@ -3,9 +3,13 @@ import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import { prisma } from './db';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'agentbridge-secure-ecom-secret-key-32chars!'
-);
+const jwtSecretValue = process.env.JWT_SECRET;
+if (!jwtSecretValue) {
+  throw new Error(
+    'JWT_SECRET environment variable is required. Set it to a random 32+ character string.',
+  );
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecretValue);
 
 const TOKEN_COOKIE_NAME = 'agentbridge_token';
 
